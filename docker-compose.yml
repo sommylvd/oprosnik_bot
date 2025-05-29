@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:15
+    container_name: oprosnik_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: oprosnik_db
+      POSTGRES_USER: oprosnik_user
+      POSTGRES_PASSWORD: securepass123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  bot:
+    build: 
+      context: ./quiz_bot  
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql+psycopg2://oprosnik_user:securepass123@db:5432/oprosnik_db
+
+volumes:
+  pgdata:
