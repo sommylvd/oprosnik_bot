@@ -1,11 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from quiz_bot.app.db import models
-from quiz_bot.app.core.config import config
+from app.db import models
+from app.core.config import config
 
 async_engine = create_async_engine(config.database_url, echo=config.ECHO)
 
-AsyncSessionLocal = sessionmaker(-
+AsyncSessionLocal = sessionmaker(
     async_engine,
     class_=AsyncSession,
     expire_on_commit=False
@@ -33,9 +33,6 @@ async def get_db():
             await session.close()
 
 
-# Для тестирования
-# async def main():
-#     await init_db_on_start_up()
-
-# if __name__ == "__main__":
-#     asyncio.run(main())
+async def main():
+    await init_db()
+    

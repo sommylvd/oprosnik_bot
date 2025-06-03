@@ -12,5 +12,6 @@ class QuestionCreate(QuestionBase):
 
 class QuestionOut(QuestionBase):
     id: int
+    created_at: datetime
     class Config:
         model_config = ConfigDict(from_attributes=True)
