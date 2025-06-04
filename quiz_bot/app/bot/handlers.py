@@ -4,11 +4,115 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters.command import Command
 from .states import SurveyStates
 from .utils import create_inline_keyboard
+from .keyboards.inline import (
+    IMPLEMENTATION_STAGE_BUTTONS,
+    PAIN_POINTS_BUTTONS,
+    FUNCTIONALITY_DETAILS_BUTTONS,
+    INTEGRATION_DETAILS_BUTTONS,
+    PERSONNEL_DETAILS_BUTTONS,
+    COMPATIBILITY_DETAILS_BUTTONS,
+    COSTS_DETAILS_BUTTONS,
+    SUPPORT_DETAILS_BUTTONS,
+    MAIN_BARRIER_BUTTONS,
+    DIRECT_REPLACEMENT_BUTTONS,
+    PILOT_TESTING_BUTTONS,
+    YES_NO_DEPENDS_BUTTONS,
+    YES_NO_BUTTONS
+)
+from cryptography.fernet import Fernet
+import base64
+import re
 
 router = Router()
 
 # In-memory storage for responses (to be replaced with DB later)
 user_responses = {}
+
+# Generate a Fernet key for encryption (in production, store this securely)
+fernet_key = Fernet.generate_key()
+cipher_suite = Fernet(fernet_key)
+
+def encrypt_data(data: str) -> str:
+    if not data:
+        return ""
+    return cipher_suite.encrypt(data.encode()).decode()
+
+def decrypt_data(data: str) -> str:
+    if not data:
+        return ""
+    return cipher_suite.decrypt(data.encode()).decode()
+
+# Pain points pages with descriptions and follow-up states
+PAIN_POINTS_PAGES = [
+    {
+        "label": "Функционал",
+        "description": "(отсутствие нужного функционала для ваших систем/оборудования)",
+        "callback_data": "functionality",
+        "follow_up_state": SurveyStates.pain_points_functionality_details,
+        "follow_up_message": "Укажите конкретные модули/процессы:"
+    },
+    {
+        "label": "Интеграция",
+        "description": "(уровень сложности интеграции ваших систем/оборудования с отечественным ПО)",
+        "callback_data": "integration",
+        "follow_up_state": SurveyStates.pain_points_integration_details,
+        "follow_up_message": "Укажите уровень сложности:",
+        "follow_up_buttons": INTEGRATION_DETAILS_BUTTONS
+    },
+    {
+        "label": "Кадры",
+        "description": "(доступность специалистов с опытом работы в нужном отечественном ПО)",
+        "callback_data": "personnel",
+        "follow_up_state": SurveyStates.pain_points_personnel_details,
+        "follow_up_message": "Укажите:",
+        "follow_up_buttons": PERSONNEL_DETAILS_BUTTONS
+    },
+    {
+        "label": "Совместимость",
+        "description": "(острота проблемы совместимости отечественного ПО с вашим имеющимся ПО)",
+        "callback_data": "compatibility",
+        "follow_up_state": SurveyStates.pain_points_compatibility_details,
+        "follow_up_message": "Укажите:",
+        "follow_up_buttons": COMPATIBILITY_DETAILS_BUTTONS
+    },
+    {
+        "label": "Затраты",
+        "description": "(направления затрат, которые вызывают наибольшее беспокойство)",
+        "callback_data": "costs",
+        "follow_up_state": SurveyStates.pain_points_costs_details,
+        "follow_up_message": "Укажите:",
+        "follow_up_buttons": COSTS_DETAILS_BUTTONS
+    },
+    {
+        "label": "Техническая поддержка",
+        "description": "(важность уровня и скорости тех. поддержки)",
+        "callback_data": "support",
+        "follow_up_state": SurveyStates.pain_points_support_details,
+        "follow_up_message": "Укажите:",
+        "follow_up_buttons": SUPPORT_DETAILS_BUTTONS
+    }
+]
+
+ITEMS_PER_PAGE = 3
+
+def create_pagination_keyboard(current_page: int) -> InlineKeyboardMarkup:
+    buttons = []
+    # Navigation buttons
+    nav_row = []
+    if current_page > 0:
+        nav_row.append(InlineKeyboardButton(text="<", callback_data=f"prev_{current_page}"))
+    nav_row.append(InlineKeyboardButton(text="Выбрать", callback_data=f"choose_{current_page}"))
+    if current_page < (len(PAIN_POINTS_PAGES) - 1) // ITEMS_PER_PAGE:
+        nav_row.append(InlineKeyboardButton(text=">", callback_data=f"next_{current_page}"))
+    buttons.append(nav_row)
+    # Other button
+    buttons.append([InlineKeyboardButton(text="Другое", callback_data="other")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_page_options(current_page: int) -> list:
+    start_idx = current_page * ITEMS_PER_PAGE
+    end_idx = start_idx + ITEMS_PER_PAGE
+    return PAIN_POINTS_PAGES[start_idx:end_idx]
 
 @router.message(Command("start"))
 async def start(message: Message, state: FSMContext):
@@ -22,121 +126,252 @@ async def start(message: Message, state: FSMContext):
 async def company_name(message: Message, state: FSMContext):
     user_id = message.from_user.id
     user_responses[user_id]["company_name"] = message.text
-    await message.reply("2. Введите должность и контакты (телефон, email) для связи:")
-    await state.set_state(SurveyStates.position_and_contacts)
+    skip_button = {"Пропустить": "skip_position"}
+    keyboard = create_inline_keyboard(skip_button, 1)
+    await message.reply("2.1. Введите вашу должность:", reply_markup=keyboard)
+    await state.set_state(SurveyStates.position)
 
-@router.message(SurveyStates.position_and_contacts)
-async def position_and_contacts(message: Message, state: FSMContext):
+@router.message(SurveyStates.position)
+async def position(message: Message, state: FSMContext):
     user_id = message.from_user.id
-    user_responses[user_id]["position_and_contacts"] = message.text
-    buttons = {
-        "Планируем": "planning",
-        "Пилотный проект": "pilot",
-        "Активно внедряем": "active",
-        "Уже перешли": "completed",
-        "Пока не планируем": "not_planning"
-    }
-    keyboard = create_inline_keyboard(buttons, 2)
+    user_responses[user_id]["position"] = message.text
+    skip_button = {"Пропустить": "skip_phone"}
+    keyboard = create_inline_keyboard(skip_button, 1)
+    await message.reply("2.2. Введите ваш номер телефона:", reply_markup=keyboard)
+    await state.set_state(SurveyStates.phone_number)
+
+@router.callback_query(SurveyStates.position, F.data == "skip_position")
+async def skip_position(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["position"] = None
+    skip_button = {"Пропустить": "skip_phone"}
+    keyboard = create_inline_keyboard(skip_button, 1)
+    await callback.message.reply("2.2. Введите ваш номер телефона:", reply_markup=keyboard)
+    await callback.answer()
+    await state.set_state(SurveyStates.phone_number)
+
+@router.message(SurveyStates.phone_number)
+async def phone_number(message: Message, state: FSMContext):
+    user_id = message.from_user.id
+    phone = message.text.strip()
+    # Allow digits and an optional leading +
+    if not re.match(r'^\+?\d+$', phone):
+        await message.reply("Пожалуйста, введите номер телефона, содержащий только цифры (можно с ведущим +).")
+        return
+    user_responses[user_id]["phone_number"] = encrypt_data(phone)
+    skip_button = {"Пропустить": "skip_email"}
+    keyboard = create_inline_keyboard(skip_button, 1)
+    await message.reply("2.3. Введите ваш email:", reply_markup=keyboard)
+    await state.set_state(SurveyStates.email)
+
+@router.callback_query(SurveyStates.phone_number, F.data == "skip_phone")
+async def skip_phone(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["phone_number"] = None
+    skip_button = {"Пропустить": "skip_email"}
+    keyboard = create_inline_keyboard(skip_button, 1)
+    await callback.message.reply("2.3. Введите ваш email:", reply_markup=keyboard)
+    await callback.answer()
+    await state.set_state(SurveyStates.email)
+
+@router.message(SurveyStates.email)
+async def email(message: Message, state: FSMContext):
+    user_id = message.from_user.id
+    email_input = message.text.strip()
+    # Check if email contains @
+    if '@' not in email_input:
+        await message.reply("Пожалуйста, введите email, содержащий символ @.")
+        return
+    user_responses[user_id]["email"] = encrypt_data(email_input)
+    keyboard = create_inline_keyboard(IMPLEMENTATION_STAGE_BUTTONS, 2)
     await message.reply(
         "3. На какой стадии перехода на отечественное ПО находится ваше предприятие?",
         reply_markup=keyboard
     )
     await state.set_state(SurveyStates.implementation_stage)
 
+@router.callback_query(SurveyStates.email, F.data == "skip_email")
+async def skip_email(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["email"] = None
+    keyboard = create_inline_keyboard(IMPLEMENTATION_STAGE_BUTTONS, 2)
+    await callback.message.reply(
+        "3. На какой стадии перехода на отечественное ПО находится ваше предприятие?",
+        reply_markup=keyboard
+    )
+    await callback.answer()
+    await state.set_state(SurveyStates.implementation_stage)
+
 @router.callback_query(SurveyStates.implementation_stage)
 async def implementation_stage(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["implementation_stage"] = callback.data
-    buttons = {
-        "Функционал": "functionality",
-        "Интеграция": "integration",
-        "Кадры": "personnel",
-        "Совместимость": "compatibility",
-        "Затраты": "costs",
-        "Техническая поддержка": "support"
-    }
-    keyboard = create_inline_keyboard(buttons, 2)
+    await state.update_data(current_page=0)  # Initialize page
+    current_page = 0
+    options = get_page_options(current_page)
+    options_text = "\n".join([f"{opt['label']} {opt['description']}" for opt in options])
+    keyboard = create_pagination_keyboard(current_page)
     await callback.message.reply(
-        "4. Основные направления «болей» с которыми столкнулось ваше предприятие?",
+        f"4. Основные направления «болей» с которыми столкнулось ваше предприятие?\n\n{options_text}",
         reply_markup=keyboard
     )
     await callback.answer()
-    await state.set_state(SurveyStates.pain_points)
+    await state.set_state(SurveyStates.pain_points_page)
 
-@router.callback_query(SurveyStates.pain_points)
-async def pain_points(callback: CallbackQuery, state: FSMContext):
-    user_id = callback.from_user.id
-    user_responses[user_id]["pain_points"] = user_responses[user_id].get("pain_points", [])
-    user_responses[user_id]["pain_points"].append(callback.data)
-
-    if callback.data == "functionality":
-        await callback.message.reply("Укажите конкретные модули/процессы:")
-        await state.set_state(SurveyStates.pain_points_details)
-    elif callback.data == "integration":
-        buttons = {
-            "очень сложно": "very_hard",
-            "сложно": "hard",
-            "средне": "medium",
-            "легко": "easy",
-            "не знаю": "dont_know",
-            "другое": "other_difficulty"
-        }
-        keyboard = create_inline_keyboard(buttons, 2)
-        await callback.message.reply("Укажите уровень сложности:", reply_markup=keyboard)
-        await state.set_state(SurveyStates.pain_points_details)
-    else:
-        buttons = {
-            "Недостаток функционала": "lack_functionality",
-            "Сложность интеграции": "complex_integration",
-            "Отсутствие специалистов": "no_specialists",
-            "Высокая стоимость": "high_cost",
-            "Риски для производства": "prod_risks",
-            "Нестабильность вендора": "vendor_instability"
-        }
-        keyboard = create_inline_keyboard(buttons, 2)
-        await callback.message.reply(
-            "5. Что является главным барьером для перехода на отечественное ПО?",
-            reply_markup=keyboard
-        )
-        await state.set_state(SurveyStates.main_barrier)
+@router.callback_query(SurveyStates.pain_points_page, F.data.startswith("prev_"))
+async def pain_points_prev(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    current_page = data.get("current_page", 0)
+    new_page = current_page - 1
+    await state.update_data(current_page=new_page)
+    options = get_page_options(new_page)
+    options_text = "\n".join([f"{opt['label']} {opt['description']}" for opt in options])
+    keyboard = create_pagination_keyboard(new_page)
+    await callback.message.edit_text(
+        f"4. Основные направления «болей» с которыми столкнулось ваше предприятие?\n\n{options_text}",
+        reply_markup=keyboard
+    )
     await callback.answer()
 
-@router.message(SurveyStates.pain_points_details)
-@router.callback_query(SurveyStates.pain_points_details)
-async def pain_points_details(update: Message | CallbackQuery, state: FSMContext):
-    user_id = update.from_user.id if isinstance(update, Message) else update.from_user.id
-    user_responses[user_id]["pain_points_details"] = update.text if isinstance(update, Message) else update.data
-    buttons = {
-        "Недостаток функционала": "lack_functionality",
-        "Сложность интеграции": "complex_integration",
-        "Отсутствие специалистов": "no_specialists",
-        "Высокая стоимость": "high_cost",
-        "Риски для производства": "prod_risks",
-        "Нестабильность вендора": "vendor_instability"
-    }
-    keyboard = create_inline_keyboard(buttons, 2)
-    msg = update if isinstance(update, Message) else update.message
-    await msg.reply(
+@router.callback_query(SurveyStates.pain_points_page, F.data.startswith("next_"))
+async def pain_points_next(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    current_page = data.get("current_page", 0)
+    new_page = current_page + 1
+    await state.update_data(current_page=new_page)
+    options = get_page_options(new_page)
+    options_text = "\n".join([f"{opt['label']} {opt['description']}" for opt in options])
+    keyboard = create_pagination_keyboard(new_page)
+    await callback.message.edit_text(
+        f"4. Основные направления «болей» с которыми столкнулось ваше предприятие?\n\n{options_text}",
+        reply_markup=keyboard
+    )
+    await callback.answer()
+
+@router.callback_query(SurveyStates.pain_points_page, F.data == "other")
+async def pain_points_other(callback: CallbackQuery, state: FSMContext):
+    await callback.message.reply("Введите ваш вариант:")
+    await callback.answer()
+    await state.set_state(SurveyStates.pain_points_other)
+
+@router.message(SurveyStates.pain_points_other)
+async def pain_points_other_input(message: Message, state: FSMContext):
+    user_id = message.from_user.id
+    user_responses[user_id]["pain_points"] = user_responses[user_id].get("pain_points", [])
+    user_responses[user_id]["pain_points"].append("other")
+    user_responses[user_id]["pain_points_details"] = message.text
+    keyboard = create_inline_keyboard(MAIN_BARRIER_BUTTONS, 2)
+    await message.reply(
         "5. Что является главным барьером для перехода на отечественное ПО?",
         reply_markup=keyboard
     )
-    if isinstance(update, CallbackQuery):
-        await update.answer()
+    await state.set_state(SurveyStates.main_barrier)
+
+@router.callback_query(SurveyStates.pain_points_page, F.data.startswith("choose_"))
+async def pain_points_choose(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    current_page = data.get("current_page", 0)
+    options = get_page_options(current_page)
+    buttons = {opt["label"]: opt["callback_data"] for opt in options}
+    keyboard = create_inline_keyboard(buttons, 1)
+    await callback.message.reply("Выберите один из вариантов:", reply_markup=keyboard)
+    await callback.answer()
+    await state.set_state(SurveyStates.pain_points_selection)
+
+@router.callback_query(SurveyStates.pain_points_selection)
+async def pain_points_selection(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    selected_option = callback.data
+    user_responses[user_id]["pain_points"] = user_responses[user_id].get("pain_points", [])
+    user_responses[user_id]["pain_points"].append(selected_option)
+
+    # Find the selected page data
+    page = next((p for p in PAIN_POINTS_PAGES if p["callback_data"] == selected_option), None)
+    if page:
+        if "follow_up_buttons" in page:
+            keyboard = create_inline_keyboard(page["follow_up_buttons"], 2)
+            await callback.message.reply(page["follow_up_message"], reply_markup=keyboard)
+        else:
+            await callback.message.reply(page["follow_up_message"])
+        await state.set_state(page["follow_up_state"])
+    await callback.answer()
+
+@router.message(SurveyStates.pain_points_functionality_details)
+async def pain_points_functionality_details(message: Message, state: FSMContext):
+    user_id = message.from_user.id
+    user_responses[user_id]["pain_points_details"] = message.text
+    keyboard = create_inline_keyboard(MAIN_BARRIER_BUTTONS, 2)
+    await message.reply(
+        "5. Что является главным барьером для перехода на отечественное ПО?",
+        reply_markup=keyboard
+    )
+    await state.set_state(SurveyStates.main_barrier)
+
+@router.callback_query(SurveyStates.pain_points_integration_details)
+async def pain_points_integration_details(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["pain_points_details"] = callback.data
+    keyboard = create_inline_keyboard(MAIN_BARRIER_BUTTONS, 2)
+    await callback.message.reply(
+        "5. Что является главным барьером для перехода на отечественное ПО?",
+        reply_markup=keyboard
+    )
+    await callback.answer()
+    await state.set_state(SurveyStates.main_barrier)
+
+@router.callback_query(SurveyStates.pain_points_personnel_details)
+async def pain_points_personnel_details(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["pain_points_details"] = callback.data
+    keyboard = create_inline_keyboard(MAIN_BARRIER_BUTTONS, 2)
+    await callback.message.reply(
+        "5. Что является главным барьером для перехода на отечественное ПО?",
+        reply_markup=keyboard
+    )
+    await callback.answer()
+    await state.set_state(SurveyStates.main_barrier)
+
+@router.callback_query(SurveyStates.pain_points_compatibility_details)
+async def pain_points_compatibility_details(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["pain_points_details"] = callback.data
+    keyboard = create_inline_keyboard(MAIN_BARRIER_BUTTONS, 2)
+    await callback.message.reply(
+        "5. Что является главным барьером для перехода на отечественное ПО?",
+        reply_markup=keyboard
+    )
+    await callback.answer()
+    await state.set_state(SurveyStates.main_barrier)
+
+@router.callback_query(SurveyStates.pain_points_costs_details)
+async def pain_points_costs_details(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["pain_points_details"] = callback.data
+    keyboard = create_inline_keyboard(MAIN_BARRIER_BUTTONS, 2)
+    await callback.message.reply(
+        "5. Что является главным барьером для перехода на отечественное ПО?",
+        reply_markup=keyboard
+    )
+    await callback.answer()
+    await state.set_state(SurveyStates.main_barrier)
+
+@router.callback_query(SurveyStates.pain_points_support_details)
+async def pain_points_support_details(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["pain_points_details"] = callback.data
+    keyboard = create_inline_keyboard(MAIN_BARRIER_BUTTONS, 2)
+    await callback.message.reply(
+        "5. Что является главным барьером для перехода на отечественное ПО?",
+        reply_markup=keyboard
+    )
+    await callback.answer()
     await state.set_state(SurveyStates.main_barrier)
 
 @router.callback_query(SurveyStates.main_barrier)
 async def main_barrier(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["main_barrier"] = callback.data
-    buttons = {
-        "Критично важно": "critical",
-        "Важно": "important",
-        "Желательно": "desirable",
-        "Не важно": "not_important",
-        "Можно": "possible",
-        "Другое": "other_replacement"
-    }
-    keyboard = create_inline_keyboard(buttons, 2)
+    keyboard = create_inline_keyboard(DIRECT_REPLACEMENT_BUTTONS, 2)
     await callback.message.reply(
         "6. Насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО? (аналог «один в один»)",
         reply_markup=keyboard
@@ -148,16 +383,11 @@ async def main_barrier(callback: CallbackQuery, state: FSMContext):
 async def direct_replacement(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["direct_replacement"] = callback.data
-    if callback.data == "other_replacement":
+    if callback.data == "other_repl":
         await callback.message.reply("Введите свой вариант:")
         await state.set_state(SurveyStates.direct_replacement_details)
     else:
-        buttons = {
-            "Да": "yes",
-            "Нет": "no",
-            "Зависит от решения": "depends"
-        }
-        keyboard = create_inline_keyboard(buttons, 2)
+        keyboard = create_inline_keyboard(YES_NO_DEPENDS_BUTTONS, 2)
         await callback.message.reply(
             "7. Готовы ли вы выделить ресурсы (время специалистов, тестовый контур) для пилотного тестирования потенциальных российских решений?",
             reply_markup=keyboard
@@ -169,12 +399,7 @@ async def direct_replacement(callback: CallbackQuery, state: FSMContext):
 async def direct_replacement_details(message: Message, state: FSMContext):
     user_id = message.from_user.id
     user_responses[user_id]["direct_replacement_details"] = message.text
-    buttons = {
-        "Да": "yes",
-        "Нет": "no",
-        "Зависит от решения": "depends"
-    }
-    keyboard = create_inline_keyboard(buttons, 2)
+    keyboard = create_inline_keyboard(YES_NO_DEPENDS_BUTTONS, 2)
     await message.reply(
         "7. Готовы ли вы выделить ресурсы (время специалистов, тестовый контур) для пилотного тестирования потенциальных российских решений?",
         reply_markup=keyboard
@@ -185,20 +410,7 @@ async def direct_replacement_details(message: Message, state: FSMContext):
 async def pilot_testing(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["pilot_testing"] = callback.data
-    buttons = {
-        "os": "Операционные системы (Astra Linux, РЕД ОС)",
-        "mes": "MES-системы (управление производством)",
-        "eng": "Инженерное ПО (САПР, PLM)",
-        "asu": "АСУ ТП (SCADA, HMI)",
-        "erp": "ERP-системы",
-        "iot": "Промышленный IoT и аналитика",
-        "cyber": "Кибербезопасность АСУ ТП",
-        "db": "СУБД (Postgres Pro и др.)",
-        "int": "Интеграционные платформы",
-        "bi": "BI-инструменты",
-        "other": "Другое"
-    }
-    keyboard = create_inline_keyboard(buttons, 2)
+    keyboard = create_inline_keyboard(PILOT_TESTING_BUTTONS, 2)
     await callback.message.reply(
         "8. Какие классы ПО вы бы хотели протестировать? (выберите или укажите текстом)",
         reply_markup=keyboard
@@ -214,11 +426,7 @@ async def software_classes(callback: CallbackQuery, state: FSMContext):
         await callback.message.reply("Введите свой вариант:")
         await state.set_state(SurveyStates.software_classes_details)
     else:
-        buttons = {
-            "Да": "yes",
-            "Нет": "no"
-        }
-        keyboard = create_inline_keyboard(buttons, 2)
+        keyboard = create_inline_keyboard(YES_NO_BUTTONS, 2)
         await callback.message.reply(
             "9. Интересно ли вам участие в мероприятии, где можно пообщаться напрямую с разработчиками российского ПО?",
             reply_markup=keyboard
@@ -230,11 +438,7 @@ async def software_classes(callback: CallbackQuery, state: FSMContext):
 async def software_classes_details(message: Message, state: FSMContext):
     user_id = message.from_user.id
     user_responses[user_id]["software_classes_details"] = message.text
-    buttons = {
-        "Да": "yes",
-        "Нет": "no"
-    }
-    keyboard = create_inline_keyboard(buttons, 2)
+    keyboard = create_inline_keyboard(YES_NO_BUTTONS, 2)
     await message.reply(
         "9. Интересно ли вам участие в мероприятии, где можно пообщаться напрямую с разработчиками российского ПО?",
         reply_markup=keyboard
@@ -245,11 +449,7 @@ async def software_classes_details(message: Message, state: FSMContext):
 async def event_interest(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["event_interest"] = callback.data
-    buttons = {
-        "Да": "yes",
-        "Нет": "no"
-    }
-    keyboard = create_inline_keyboard(buttons, 2)
+    keyboard = create_inline_keyboard(YES_NO_BUTTONS, 2)
     await callback.message.reply(
         "10. Хотели ли бы вы, чтобы вам помогли подобрать российское решение под ваш профиль?",
         reply_markup=keyboard
@@ -264,7 +464,6 @@ async def solution_help(callback: CallbackQuery, state: FSMContext):
     await callback.message.reply("Спасибо, что прошли наш опрос!")
     await callback.answer()
     await state.clear()
-    # Here you can save user_responses[user_id] to a database in the future
 
 @router.message(Command("cancel"))
 async def cancel(message: Message, state: FSMContext):
