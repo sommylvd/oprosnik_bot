@@ -12,6 +12,6 @@ class SurveyAnswerCreate(SurveyAnswerBase):
 
 class SurveyAnswerOut(SurveyAnswerBase):
     id: int
-    create_at: datetime
+    created_at: datetime
     class Config:
         model_config = ConfigDict(from_attributes=True)

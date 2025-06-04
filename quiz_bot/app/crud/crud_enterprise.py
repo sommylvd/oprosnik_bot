@@ -20,12 +20,6 @@ async def create(session: AsyncSession, data: EnterpriseCreate) -> EnterpriseOut
 
     Returns:
         EnterpriseOut | list: Объект созданного предприятия или пустой список при ошибке.
-
-    Работа:
-        - Конвертирует Pydantic-объект в словарь
-        - Создает ORM-объект Enterprises
-        - Сохраняет в БД и обновляет объект
-        - Возвращает EnterpriseOut-представление
     """
     try:
         enterprise_data = data.model_dump()
@@ -39,7 +33,7 @@ async def create(session: AsyncSession, data: EnterpriseCreate) -> EnterpriseOut
     except IntegrityError as e:
         await session.rollback()
         logging.error(json.dumps({
-            "message": "Такой ",
+            "message": "Такой ИНН уже существует",
             "data": enterprise_data,
             "error": str(e),
             "time": datetime.now().isoformat(),
@@ -65,11 +59,6 @@ async def get(session: AsyncSession, id: int) -> EnterpriseOut | object:
 
     Returns:
         EnterpriseOut | list: Объект предприятия или пустой список при ошибке/отсутствии.
-
-    Работа:
-        - Проверяет валидность ID
-        - Выполняет асинхронный запрос к БД
-        - Конвертирует результат в Pydantic-объект
     """
     if id < 1:
         return None
@@ -95,10 +84,6 @@ async def get_all(session: AsyncSession) -> list[EnterpriseOut] | object:
 
     Returns:
         list[EnterpriseOut] | list: Список предприятий или пустой список при ошибке.
-
-    Работа:
-        - Выполняет асинхронный запрос всех предприятий
-        - Конвертирует результаты в список Pydantic-объектов
     """
     try:
         result = await session.execute(select(Enterprises))

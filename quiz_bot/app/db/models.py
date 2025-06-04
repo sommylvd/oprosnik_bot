@@ -79,7 +79,7 @@ class Respondents(Base):
     consent: Mapped[bool] = mapped_column(Boolean, default=False)
     create_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
-    enterprise: Mapped["Enterprises"] = relationship(back_populates="respondent")
+    enterprise: Mapped[list["Enterprises"]] = relationship(back_populates="respondent")
     survey: Mapped["Surveys"] = relationship(back_populates="respondent")
 
     def to_pydantic(self):
@@ -127,13 +127,12 @@ class Surveys(Base):
             id=self.id,
             respondent_id=self.respondent_id,
             started_at=self.started_at,
-            completed_at=self.completed_at,
+            completed_at=self.completed_at if self.completed_at else None,
             ip_address=self.ip_address,
-            email=self.email,
             user_agent=self.user_agent
         )
 
-class Question(Base):
+class Questions(Base):
     """
     Вопросы опросника.
 
@@ -187,7 +186,7 @@ class SurveyAnswers(Base):
     answer: Mapped[dict] = mapped_column(JSONB(none_as_null=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     
-    question: Mapped["Question"] = relationship(back_populates="answers")
+    question: Mapped["Questions"] = relationship(back_populates="answers")
     survey: Mapped["Surveys"] = relationship(back_populates="answers")
 
     def to_pydantic(self):
@@ -218,7 +217,6 @@ class Industries(Base):
         return industry.IndustryOut(
             id=self.id,
             name=self.name,
-            question_id=self.question_id,
             description=self.description
         )
 
