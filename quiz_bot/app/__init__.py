@@ -3,6 +3,7 @@ import logging
 from app.core.config import config
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+
 from app.core.config import config
 from app.bot.handlers import router
 # 
