@@ -31,19 +31,20 @@ class Enterprises(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    industry: Mapped[str] = mapped_column(String(100), nullable=False)
+    industry_id: Mapped[int] = mapped_column(ForeignKey('industries.id'), nullable=False)
     inn: Mapped[str] = mapped_column(String(12), unique=True)
     short_name: Mapped[str] = mapped_column(String(100))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     create_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     
     respondent: Mapped["Respondents"] = relationship(back_populates="enterprise")
+    industry: Mapped["Industries"] = relationship(back_populates="enterprise")
 
     def to_pydantic(self):
         return enterprise.EnterpriseOut(
             id=self.id,
             name=self.name,
-            industry=self.industry,
+            industry_id=self.industry_id,
             inn=self.inn,
             short_name=self.short_name,
             is_active=self.is_active,
@@ -212,6 +213,8 @@ class Industries(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     description: Mapped[str] = mapped_column(String)
+
+    enterprise: Mapped["Enterprises"] = relationship(back_populates="industry")
 
     def to_pydantic(self):
         return industry.IndustryOut(
