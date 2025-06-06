@@ -48,7 +48,6 @@ async def create(session: AsyncSession, data: SurveyCreate) -> SurveyOut | objec
             respondent_id=data.respondent_id,
             started_at=started_at,
             completed_at=completed_at,
-            ip_address=data.ip_address,
             user_agent=data.user_agent
         )
         session.add(survey)

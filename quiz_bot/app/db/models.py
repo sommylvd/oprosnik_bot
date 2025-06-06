@@ -101,7 +101,6 @@ class Surveys(Base):
         respondent_id: Ссылка на респондента.
         started_at: Время начала опроса.
         completed_at: Время завершения опроса (если завершен).
-        ip_address: IP-адрес устройства респондента.
         user_agent: Информация о браузере/устройстве респондента.
     """
     __tablename__ = 'surveys'
