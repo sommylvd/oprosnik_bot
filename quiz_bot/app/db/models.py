@@ -42,7 +42,6 @@ class Enterprises(Base):
         return enterprise.EnterpriseOut(
             id=self.id,
             name=self.name,
-            industry_id=self.industry_id,
             inn=self.inn,
             short_name=self.short_name,
             is_active=self.is_active,
