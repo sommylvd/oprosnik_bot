@@ -3,7 +3,6 @@ from datetime import datetime
 
 class EnterpriseBase(BaseModel):
     name: str
-    industry_id: int
     inn: str
     short_name: str
     is_active: bool = True

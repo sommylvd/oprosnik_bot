@@ -1,7 +1,6 @@
 URL = 'http://localhost:8000/'
 ALL = 'all'
 ENTERPRISES = 'enterprises/'
-INDUSTRIES = 'industries/'
 QUESTIONS = 'questions/'
 RESPONDENTS = 'respondents/'
 SOFTWARE_CATEGORIES = 'software_categories/'
