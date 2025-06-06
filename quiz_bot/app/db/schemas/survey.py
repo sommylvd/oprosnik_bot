@@ -6,8 +6,7 @@ class SurveyBase(BaseModel):
     respondent_id: int
     started_at: datetime
     completed_at: Optional[datetime] = None
-    ip_address: str
-    user_agent: str
+    user_agent: Optional[str] = None
 
 class SurveyCreate(SurveyBase):
     pass

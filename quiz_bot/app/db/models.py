@@ -101,7 +101,6 @@ class Surveys(Base):
         respondent_id: Ссылка на респондента.
         started_at: Время начала опроса.
         completed_at: Время завершения опроса (если завершен).
-        ip_address: IP-адрес устройства респондента.
         user_agent: Информация о браузере/устройстве респондента.
     """
     __tablename__ = 'surveys'
@@ -114,8 +113,7 @@ class Surveys(Base):
     respondent_id: Mapped[int] = mapped_column(ForeignKey('respondents.id'))
     started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=None)
-    ip_address: Mapped[str] = mapped_column(String(45))
-    user_agent: Mapped[str] = mapped_column(String)
+    user_agent: Mapped[Optional[str]] = mapped_column(String, default=None)
     
     respondent: Mapped['Respondents'] = relationship(back_populates='survey')
     answers: Mapped[list["SurveyAnswers"]] = relationship(back_populates="survey")
@@ -126,7 +124,6 @@ class Surveys(Base):
             respondent_id=self.respondent_id,
             started_at=self.started_at,
             completed_at=self.completed_at if self.completed_at else None,
-            ip_address=self.ip_address,
             user_agent=self.user_agent
         )
 
