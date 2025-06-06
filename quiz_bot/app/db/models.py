@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from typing import Optional
 from datetime import datetime
-from app.db.schemas import (enterprise, industry, question, respondent, 
+from app.db.schemas import (enterprise, question, respondent, 
                      software_category, survey_answer, survey)
 
 class Base(DeclarativeBase):
@@ -31,14 +31,12 @@ class Enterprises(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    industry_id: Mapped[int] = mapped_column(ForeignKey('industries.id'), nullable=False)
     inn: Mapped[str] = mapped_column(String(12), unique=True)
     short_name: Mapped[str] = mapped_column(String(100))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     create_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
     
     respondent: Mapped["Respondents"] = relationship(back_populates="enterprise")
-    industry: Mapped["Industries"] = relationship(back_populates="enterprise")
 
     def to_pydantic(self):
         return enterprise.EnterpriseOut(
@@ -199,30 +197,6 @@ class SurveyAnswers(Base):
             created_at=self.created_at
         )
     
-class Industries(Base):
-    """
-    Справочник отраслей экономики.
-
-    Attributes:
-        id: Уникальный идентификатор отрасли.
-        name: Название отрасли (уникальное).
-        description: Описание отрасли.
-    """
-    __tablename__ = 'industries'
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
-    description: Mapped[str] = mapped_column(String)
-
-    enterprise: Mapped["Enterprises"] = relationship(back_populates="industry")
-
-    def to_pydantic(self):
-        return industry.IndustryOut(
-            id=self.id,
-            name=self.name,
-            description=self.description
-        )
-
 class SoftwareCategories(Base):
     """
     Категории программного обеспечения.

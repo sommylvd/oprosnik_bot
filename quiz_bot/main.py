@@ -1,5 +1,4 @@
 from app.api.route_enterprise import router as enterprise_router
-from app.api.route_industry import router as industry_router
 from app.api.route_respondent import router as respondent_router
 from app.api.route_survey import router as survey_router
 from app.api.route_question import router as question_router
@@ -17,7 +16,6 @@ app = FastAPI(on_startup=[on_startup, init_db],
 
 app.include_router(enterprise_router)
 app.include_router(respondent_router)
-app.include_router(industry_router)
 app.include_router(survey_router)
 app.include_router(question_router)
 app.include_router(survey_answer_router)
