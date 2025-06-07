@@ -1,6 +1,6 @@
 import logging
 import httpx
-from app.core.request_conf import ENTERPRISES, URL, ALL
+from app.core.request_conf import URL, ENTERPRISES, ALL
 
 async def create_enterprise(data: dict):
     """
@@ -13,18 +13,24 @@ async def create_enterprise(data: dict):
         dict: Объект созданного предприятия при успешном запросе.
 
     Raises:
-        HTTPStatusError: Если сервер вернул ошибку HTTP.
+        httpx.HTTPStatusError: Если сервер вернул ошибку HTTP.
     """
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(f'{URL}{ENTERPRISES}', json=data)
+            if response.status_code != 200:
+                logging.error(f"Ошибка при создании предприятия. Код: {response.status_code}, Тело ответа: {response.text}")
             response.raise_for_status()
             if response.status_code == 200:
                 enterprise = response.json()
                 return enterprise
     except httpx.HTTPStatusError as e:
         logging.exception(f"Произошла ошибка при создании предприятия: {str(e)}")
-        raise httpx._exceptions.HTTPStatusError(message="Произошла ошибка при создании предприятия")
+        raise httpx.HTTPStatusError(
+            message="Произошла ошибка при создании предприятия",
+            request=e.request,
+            response=e.response
+        )
 
 async def get_enterprise(enterprise_id: int):
     """
@@ -37,18 +43,24 @@ async def get_enterprise(enterprise_id: int):
         dict: Данные предприятия при успешном запросе.
 
     Raises:
-        HTTPStatusError: Если сервер вернул ошибку HTTP.
+        httpx.HTTPStatusError: Если сервер вернул ошибку HTTP.
     """
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(f'{URL}{ENTERPRISES}', params={'enterprise_id': enterprise_id})
+            if response.status_code != 200:
+                logging.error(f"Ошибка при получении предприятия. Код: {response.status_code}, Тело ответа: {response.text}")
             response.raise_for_status()
             if response.status_code == 200:
                 enterprise = response.json()
                 return enterprise
     except httpx.HTTPStatusError as e:
         logging.exception(f"Произошла ошибка при получении предприятия: {str(e)}")
-        raise httpx._exceptions.HTTPStatusError(message="Произошла ошибка при получении предприятия")
+        raise httpx.HTTPStatusError(
+            message="Произошла ошибка при получении предприятия",
+            request=e.request,
+            response=e.response
+        )
     
 async def get_enterprises():
     """
@@ -58,15 +70,21 @@ async def get_enterprises():
         list: Список предприятий при успешном запросе.
 
     Raises:
-        HTTPStatusError: Если сервер вернул ошибку HTTP.
+        httpx.HTTPStatusError: Если сервер вернул ошибку HTTP.
     """
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(f'{URL}{ENTERPRISES}{ALL}')
+            if response.status_code != 200:
+                logging.error(f"Ошибка при получении предприятий. Код: {response.status_code}, Тело ответа: {response.text}")
             response.raise_for_status()
             if response.status_code == 200:
                 enterprises = response.json()
                 return enterprises
     except httpx.HTTPStatusError as e:
         logging.exception(f"Произошла ошибка при получении предприятий: {str(e)}")
-        raise httpx._exceptions.HTTPStatusError(message="Произошла ошибка при получении предприятий")
+        raise httpx.HTTPStatusError(
+            message="Произошла ошибка при получении предприятий",
+            request=e.request,
+            response=e.response
+        )

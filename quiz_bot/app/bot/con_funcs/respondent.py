@@ -18,13 +18,19 @@ async def create_respondent(data: dict):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(f'{URL}{RESPONDENTS}', json=data)
+            if response.status_code != 200:
+                logging.error(f"Ошибка при создании респондента. Код: {response.status_code}, Тело ответа: {response.text}")
             response.raise_for_status()
             if response.status_code == 200:
                 respondent = response.json()
                 return respondent
     except httpx.HTTPStatusError as e:
         logging.exception(f"Произошла ошибка при создании респондента: {str(e)}")
-        raise httpx._exceptions.HTTPStatusError(message="Произошла ошибка при создании респондента")
+        raise httpx.HTTPStatusError(
+            message="Произошла ошибка при создании респондента",
+            request=e.request,
+            response=e.response
+        )
 
 async def get_respondent(respondent_id: int):
     """
@@ -42,13 +48,19 @@ async def get_respondent(respondent_id: int):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(f'{URL}{RESPONDENTS}', params={'respondent_id': respondent_id})
+            if response.status_code != 200:
+                logging.error(f"Ошибка при получении респондента. Код: {response.status_code}, Тело ответа: {response.text}")
             response.raise_for_status()
             if response.status_code == 200:
                 respondent = response.json()
                 return respondent
     except httpx.HTTPStatusError as e:
         logging.exception(f"Произошла ошибка при получении респондента: {str(e)}")
-        raise httpx._exceptions.HTTPStatusError(message="Произошла ошибка при получении респондента")
+        raise httpx.HTTPStatusError(
+            message="Произошла ошибка при получении респондента",
+            request=e.request,
+            response=e.response
+        )
     
 async def get_respondents():
     """
@@ -63,10 +75,16 @@ async def get_respondents():
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(f'{URL}{RESPONDENTS}{ALL}')
+            if response.status_code != 200:
+                logging.error(f"Ошибка при получении респондентов. Код: {response.status_code}, Тело ответа: {response.text}")
             response.raise_for_status()
             if response.status_code == 200:
                 respondents = response.json()
                 return respondents
     except httpx.HTTPStatusError as e:
         logging.exception(f"Произошла ошибка при получении респондентов: {str(e)}")
-        raise httpx._exceptions.HTTPStatusError(message="Произошла ошибка при получении респондентов")
+        raise httpx.HTTPStatusError(
+            message="Произошла ошибка при получении респондентов",
+            request=e.request,
+            response=e.response
+        )
