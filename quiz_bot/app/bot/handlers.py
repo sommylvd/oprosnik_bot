@@ -27,7 +27,8 @@ from app.bot.con_funcs.enterprise import create_enterprise
 from app.bot.con_funcs.respondent import create_respondent
 from app.bot.con_funcs.survey import create_survey
 from app.bot.con_funcs.survey_answer import create_survey_answer
-from app.bot.con_funcs.software_category import create_software_category
+from app.bot.con_funcs.software_category import *
+from app.bot.con_funcs.question import create_question, get_questions  # Добавили импорт
 
 router = Router()
 
@@ -337,12 +338,20 @@ async def email(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    # Инициализация question_id для вопроса о стадии перехода
-    user_responses[user_id]["question_id"] = 1  # Замените на реальный ID вопроса о стадии перехода
+    # Создаем вопрос о стадии перехода
+    question_text = "На какой стадии перехода на отечественное ПО находится ваше предприятие?"
+    try:
+        question_data = {"text": question_text, "number": 1, "answer_type": "string"}
+        question = await create_question(question_data)
+        user_responses[user_id]["question_id"] = question.get("id")
+    except Exception as e:
+        await message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+        await state.clear()
+        return
 
     keyboard = create_inline_keyboard(IMPLEMENTATION_STAGE_BUTTONS, 2)
     await message.reply(
-        "3. На какой стадии перехода на отечественное ПО находится ваше предприятие?",
+        question_text,
         reply_markup=keyboard
     )
     await state.set_state(SurveyStates.implementation_stage)
@@ -384,12 +393,20 @@ async def skip_email(callback: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
-    # Инициализация question_id для вопроса о стадии перехода
-    user_responses[user_id]["question_id"] = 1  # Замените на реальный ID вопроса о стадии перехода
+    # Создаем вопрос о стадии перехода
+    question_text = "На какой стадии перехода на отечественное ПО находится ваше предприятие?"
+    try:
+        question_data = {"text": question_text, "number": 1, "answer_type": "string"}
+        question = await create_question(question_data)
+        user_responses[user_id]["question_id"] = question.get("id")
+    except Exception as e:
+        await callback.message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+        await state.clear()
+        return
 
     keyboard = create_inline_keyboard(IMPLEMENTATION_STAGE_BUTTONS, 2)
     await callback.message.reply(
-        "3. На какой стадии перехода на отечественное ПО находится ваше предприятие?",
+        question_text,
         reply_markup=keyboard
     )
     await callback.answer()
@@ -453,10 +470,22 @@ async def pain_points_other_input(message: Message, state: FSMContext):
     user_responses[user_id]["pain_points"] = user_responses[user_id].get("pain_points", [])
     user_responses[user_id]["pain_points"].append("other")
     user_responses[user_id]["pain_points_details"] = message.text
+
+    # Создаем новый вопрос для "other"
+    question_text = f"Другое направление 'болей': {message.text}"
+    try:
+        question_data = {"text": question_text, "number": 4, "answer_type": "string"}  # number=4 для вопроса 4
+        question = await create_question(question_data)
+        user_responses[user_id]["question_id"] = question.get("id")
+    except Exception as e:
+        await message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+        await state.clear()
+        return
+
     # Сохранение ответа на вопрос 4 (other)
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,  # Увеличение question_id для следующего вопроса
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": f"other: {message.text}"}
     }
     try:
@@ -491,6 +520,18 @@ async def pain_points_selection(callback: CallbackQuery, state: FSMContext):
     user_responses[user_id]["pain_points"].append(selected_option)
     page = next((p for p in PAIN_POINTS_PAGES if p["callback_data"] == selected_option), None)
     if page:
+        # Создаем новый вопрос для выбранного направления
+        question_text = f"Детали для {page['label']}: {page['description']}"
+        question_number = 4  # Устанавливаем номер для вопроса 4
+        try:
+            question_data = {"text": question_text, "number": question_number, "answer_type": "string"}
+            question = await create_question(question_data)
+            user_responses[user_id]["question_id"] = question.get("id")
+        except Exception as e:
+            await callback.message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+            await state.clear()
+            return
+
         if "follow_up_buttons" in page:
             keyboard = create_inline_keyboard(page["follow_up_buttons"], 2)
             await callback.message.reply(page["follow_up_message"], reply_markup=keyboard)
@@ -506,7 +547,7 @@ async def pain_points_functionality_details(message: Message, state: FSMContext)
     # Сохранение ответа на вопрос 4 (functionality)
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": message.text}
     }
     try:
@@ -529,7 +570,7 @@ async def pain_points_integration_details(callback: CallbackQuery, state: FSMCon
     # Сохранение ответа на вопрос 4 (integration)
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": callback.data}
     }
     try:
@@ -553,7 +594,7 @@ async def pain_points_personnel_details(callback: CallbackQuery, state: FSMConte
     # Сохранение ответа на вопрос 4 (personnel)
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": callback.data}
     }
     try:
@@ -577,7 +618,7 @@ async def pain_points_compatibility_details(callback: CallbackQuery, state: FSMC
     # Сохранение ответа на вопрос 4 (compatibility)
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": callback.data}
     }
     try:
@@ -601,7 +642,7 @@ async def pain_points_costs_details(callback: CallbackQuery, state: FSMContext):
     # Сохранение ответа на вопрос 4 (costs)
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": callback.data}
     }
     try:
@@ -625,7 +666,7 @@ async def pain_points_support_details(callback: CallbackQuery, state: FSMContext
     # Сохранение ответа на вопрос 4 (support)
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": callback.data}
     }
     try:
@@ -646,10 +687,21 @@ async def pain_points_support_details(callback: CallbackQuery, state: FSMContext
 async def main_barrier(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["main_barrier"] = callback.data
+    # Создаем новый вопрос для барьера
+    question_text = "Что является главным барьером для перехода на отечественное ПО?"
+    try:
+        question_data = {"text": question_text, "number": 5, "answer_type": "string"}  # number=5 для вопроса 5
+        question = await create_question(question_data)
+        user_responses[user_id]["question_id"] = question.get("id")
+    except Exception as e:
+        await callback.message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+        await state.clear()
+        return
+
     # Сохранение ответа на вопрос 5
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": callback.data}
     }
     try:
@@ -670,10 +722,21 @@ async def main_barrier(callback: CallbackQuery, state: FSMContext):
 async def direct_replacement(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["direct_replacement"] = callback.data
+    # Создаем новый вопрос для замещения
+    question_text = "Насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО? (аналог «один в один»)"
+    try:
+        question_data = {"text": question_text, "number": 6, "answer_type": "string"}  # number=6 для вопроса 6
+        question = await create_question(question_data)
+        user_responses[user_id]["question_id"] = question.get("id")
+    except Exception as e:
+        await callback.message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+        await state.clear()
+        return
+
     # Сохранение ответа на вопрос 6
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": callback.data}
     }
     try:
@@ -698,10 +761,21 @@ async def direct_replacement(callback: CallbackQuery, state: FSMContext):
 async def direct_replacement_details(message: Message, state: FSMContext):
     user_id = message.from_user.id
     user_responses[user_id]["direct_replacement_details"] = message.text
+    # Создаем новый вопрос для деталей замещения
+    question_text = f"Детали замещения: {message.text}"
+    try:
+        question_data = {"text": question_text, "number": 6, "answer_type": "string"}  # number=6 для вопроса 6 (other)
+        question = await create_question(question_data)
+        user_responses[user_id]["question_id"] = question.get("id")
+    except Exception as e:
+        await message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+        await state.clear()
+        return
+
     # Сохранение ответа на вопрос 6 (other)
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": f"other: {message.text}"}
     }
     try:
@@ -721,10 +795,21 @@ async def direct_replacement_details(message: Message, state: FSMContext):
 async def pilot_testing(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["pilot_testing"] = callback.data
+    # Создаем новый вопрос для тестирования
+    question_text = "Готовы ли вы выделить ресурсы (время специалистов, тестовый контур) для пилотного тестирования потенциальных российских решений?"
+    try:
+        question_data = {"text": question_text, "number": 7, "answer_type": "string"}  # number=7 для вопроса 7
+        question = await create_question(question_data)
+        user_responses[user_id]["question_id"] = question.get("id")
+    except Exception as e:
+        await callback.message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+        await state.clear()
+        return
+
     # Сохранение ответа на вопрос 7
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": callback.data}
     }
     try:
@@ -745,38 +830,74 @@ async def pilot_testing(callback: CallbackQuery, state: FSMContext):
 async def software_classes(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["software_classes"] = callback.data
+    
+    # Создаем новый вопрос для классов ПО
+    question_text = "Какие классы ПО вы бы хотели протестировать? (выберите или укажите текстом)"
+    try:
+        question_data = {"text": question_text, "number": 8, "answer_type": "string"}  # number=8 для вопроса 8
+        question = await create_question(question_data)
+        user_responses[user_id]["question_id"] = question.get("id")
+    except Exception as e:
+        await callback.message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+        await state.clear()
+        return
+
     if callback.data != "other":
-        # Сохранение категории ПО
-        software_category_data = {"name": callback.data}
-        software_category = await create_software_category(software_category_data)
-        user_responses[user_id]["software_category_id"] = software_category.get("id") if software_category else None
-        # Сохранение ответа на вопрос 8
-        survey_answer_data = {
-            "survey_id": user_responses[user_id]["survey_id"],
-            "question_id": user_responses[user_id]["question_id"] + 1,
-            "answer": {"value": callback.data}
-        }
         try:
+            # Проверяем, существует ли уже такая категория ПО
+            existing_categories = await get_software_categories()
+            category_exists = any(cat["name"].lower() == callback.data.lower() for cat in existing_categories)
+            
+            if not category_exists:
+                # Создаем новую категорию ПО только если она не существует
+                software_category_data = {"name": callback.data, "description": "string"}
+                software_category = await create_software_category(software_category_data)
+                user_responses[user_id]["software_category_id"] = software_category.get("id") if software_category else None
+            else:
+                # Если категория существует, находим её ID
+                existing_category = next(cat for cat in existing_categories if cat["name"].lower() == callback.data.lower())
+                user_responses[user_id]["software_category_id"] = existing_category.get("id")
+            
+            # Сохранение ответа на вопрос 8
+            survey_answer_data = {
+                "survey_id": user_responses[user_id]["survey_id"],
+                "question_id": user_responses[user_id]["question_id"],
+                "answer": {"value": callback.data}
+            }
             await create_survey_answer(survey_answer_data)
+            
+            keyboard = create_inline_keyboard(YES_NO_BUTTONS, 2)
+            await callback.message.reply(
+                "9. Интересно ли вам участие в мероприятии, где можно пообщаться напрямую с разработчиками российского ПО?",
+                reply_markup=keyboard
+            )
+            await state.set_state(SurveyStates.event_interest)
+            
         except Exception as e:
-            await callback.message.reply(f"Ошибка при сохранении ответа: {str(e)}")
+            await callback.message.reply(f"Ошибка при обработке категории ПО: {str(e)}")
             await state.clear()
             return
-        keyboard = create_inline_keyboard(YES_NO_BUTTONS, 2)
-        await callback.message.reply(
-            "9. Интересно ли вам участие в мероприятии, где можно пообщаться напрямую с разработчиками российского ПО?",
-            reply_markup=keyboard
-        )
-        await state.set_state(SurveyStates.event_interest)
     else:
         await callback.message.reply("Введите свой вариант:")
         await state.set_state(SurveyStates.software_classes_details)
+    
     await callback.answer()
 
 @router.message(SurveyStates.software_classes_details)
 async def software_classes_details(message: Message, state: FSMContext):
     user_id = message.from_user.id
     user_responses[user_id]["software_classes_details"] = message.text
+    # Создаем новый вопрос для деталей классов ПО
+    question_text = f"Детали классов ПО: {message.text}"
+    try:
+        question_data = {"text": question_text, "number": 8, "answer_type": "string"}  # number=8 для вопроса 8 (other)
+        question = await create_question(question_data)
+        user_responses[user_id]["question_id"] = question.get("id")
+    except Exception as e:
+        await message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+        await state.clear()
+        return
+
     # Сохранение категории ПО (пользовательский ввод)
     software_category_data = {"name": message.text}
     software_category = await create_software_category(software_category_data)
@@ -784,7 +905,7 @@ async def software_classes_details(message: Message, state: FSMContext):
     # Сохранение ответа на вопрос 8 (other)
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": f"other: {message.text}"}
     }
     try:
@@ -804,10 +925,21 @@ async def software_classes_details(message: Message, state: FSMContext):
 async def event_interest(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["event_interest"] = callback.data
+    # Создаем новый вопрос для интереса к мероприятию
+    question_text = "Интересно ли вам участие в мероприятии, где можно пообщаться напрямую с разработчиками российского ПО?"
+    try:
+        question_data = {"text": question_text, "number": 9, "answer_type": "string"}  # number=9 для вопроса 9
+        question = await create_question(question_data)
+        user_responses[user_id]["question_id"] = question.get("id")
+    except Exception as e:
+        await callback.message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+        await state.clear()
+        return
+
     # Сохранение ответа на вопрос 9
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": callback.data}
     }
     try:
@@ -828,10 +960,21 @@ async def event_interest(callback: CallbackQuery, state: FSMContext):
 async def solution_help(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["solution_help"] = callback.data
+    # Создаем новый вопрос для помощи с решением
+    question_text = "Хотели ли бы вы, чтобы вам помогли подобрать российское решение под ваш профиль?"
+    try:
+        question_data = {"text": question_text, "number": 10, "answer_type": "string"}  # number=10 для вопроса 10
+        question = await create_question(question_data)
+        user_responses[user_id]["question_id"] = question.get("id")
+    except Exception as e:
+        await callback.message.reply(f"Ошибка при работе с вопросами: {str(e)}")
+        await state.clear()
+        return
+
     # Сохранение ответа на вопрос 10
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
-        "question_id": user_responses[user_id]["question_id"] + 1,
+        "question_id": user_responses[user_id]["question_id"],
         "answer": {"value": callback.data}
     }
     try:

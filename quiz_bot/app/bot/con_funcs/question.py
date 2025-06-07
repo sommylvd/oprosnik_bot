@@ -4,19 +4,33 @@ from app.core.request_conf import URL, QUESTIONS, ALL
 
 async def create_question(data: dict):
     """
-    Создает новый вопрос.
+    Создает новый вопрос или возвращает существующий по уникальному номеру.
 
     Args:
-        data (Dict[str, Any]): Словарь с данными для создания вопроса.
+        data (dict): Словарь с данными для создания вопроса (например, {"text": "Вопрос", "number": 1, "answer_type": "string"}).
 
     Returns:
-        Dict[str, Any]: Объект созданного вопроса при успешном запросе.
+        dict: Объект созданного или существующего вопроса при успешном запросе.
 
     Raises:
         httpx.HTTPStatusError: Если сервер вернул ошибку HTTP.
     """
     try:
+        # Убедимся, что number и answer_type присутствуют
+        data.setdefault("answer_type", "string")
+        if "number" not in data:
+            data["number"] = 1  # Значение по умолчанию, если не указано
+
         async with httpx.AsyncClient() as client:
+            # Сначала проверяем, существует ли вопрос с таким number
+            response = await client.get(f'{URL}{QUESTIONS}', params={'number': data["number"]})
+            if response.status_code == 200:
+                questions = response.json()
+                if questions and len(questions) > 0:
+                    logging.info(f"Вопрос с number {data['number']} уже существует, возвращаем существующий.")
+                    return questions[0]  # Возвращаем первый совпавший вопрос
+
+            # Если вопроса нет, создаем новый
             response = await client.post(f'{URL}{QUESTIONS}', json=data)
             if response.status_code != 200:
                 logging.error(f"Ошибка при создании вопроса. Код: {response.status_code}, Тело ответа: {response.text}")
@@ -40,7 +54,7 @@ async def get_question(question_id: int):
         question_id (int): Идентификатор вопроса.
 
     Returns:
-        Dict[str, Any]: Словарь с данными вопроса при успешном запросе.
+        dict: Данные вопроса при успешном запросе.
 
     Raises:
         httpx.HTTPStatusError: Если сервер вернул ошибку HTTP.
@@ -67,7 +81,7 @@ async def get_questions():
     Получает список всех вопросов.
 
     Returns:
-        List[Dict[str, Any]]: Список словарей с данными всех вопросов при успешном запросе.
+        list: Список словарей с данными всех вопросов при успешном запросе.
 
     Raises:
         httpx.HTTPStatusError: Если сервер вернул ошибку HTTP.

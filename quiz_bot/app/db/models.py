@@ -139,7 +139,7 @@ class Questions(Base):
     """
     __tablename__ = 'questions'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    number: Mapped[int] = mapped_column(Integer, nullable=False, unique=True)  # номер вопроса  
+    number: Mapped[int] = mapped_column(Integer, nullable=False)  # номер вопроса  
     text: Mapped[str] = mapped_column(String, nullable=False)  # текст вопроса
     answer_type: Mapped[str] = mapped_column(String)  # тип ответа 
     

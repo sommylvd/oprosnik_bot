@@ -3,6 +3,7 @@ import logging
 from app.core.config import config
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import BotCommand
 
 from app.core.config import config
 from app.bot.handlers import router
@@ -13,8 +14,13 @@ from app.bot.handlers import router
 bot = Bot(token=config.TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 
+commands = [
+        BotCommand(command="/start", description="Начать работу"),
+    ]
+
 
 async def start():
+    await bot.set_my_commands(commands)
     dp.include_router(router)
     # dp.include_router(start_router)
     # dp.include_router(balance_router)
