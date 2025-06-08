@@ -132,13 +132,13 @@ async def start(message: Message, state: FSMContext):
 async def consent_agree(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["consent"] = True
-    await callback.message.reply("Введите полное название вашей компании или организации:")
+    await callback.message.edit_text("Введите полное название вашей компании или организации:", reply_markup=None)
     await callback.answer()
     await state.set_state(SurveyStates.company_name)
 
 @router.callback_query(SurveyStates.consent, F.data == "consent_disagree")
 async def consent_disagree(callback: CallbackQuery, state: FSMContext):
-    await callback.message.reply("Вы не согласились на обработку персональных данных. Опрос завершен.")
+    await callback.message.edit_text("Вы не согласились на обработку персональных данных. Опрос завершен.", reply_markup=None)
     await callback.answer()
     await state.clear()
 
@@ -157,7 +157,7 @@ async def company_name(message: Message, state: FSMContext):
 async def skip_company_name(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["company_name"] = None
-    await callback.message.reply("Название компании обязательно. Пожалуйста, введите название компании.")
+    await callback.message.edit_text("Название компании обязательно. Пожалуйста, введите название компании.", reply_markup=None)
     await callback.answer()
     await state.set_state(SurveyStates.company_name)
 
@@ -204,7 +204,7 @@ async def skip_company_inn(callback: CallbackQuery, state: FSMContext):
         await callback.message.reply(f"Ошибка при создании предприятия: {str(e)}")
         await state.clear()
         return
-    await callback.message.reply("Введите ваше ФИО (полностью):")
+    await callback.message.edit_text("Введите ваше ФИО (полностью):", reply_markup=None)
     await callback.answer()
     await state.set_state(SurveyStates.full_name)
 
@@ -219,7 +219,7 @@ async def full_name(message: Message, state: FSMContext):
 async def skip_full_name(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["full_name"] = None
-    await callback.message.reply("Введите вашу должность:")
+    await callback.message.edit_text("Введите вашу должность:", reply_markup=None)
     await callback.answer()
     await state.set_state(SurveyStates.position)
 
@@ -234,7 +234,7 @@ async def position(message: Message, state: FSMContext):
 async def skip_position(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["position"] = None
-    await callback.message.reply("Введите ваш рабочий телефон:")
+    await callback.message.edit_text("Введите ваш рабочий телефон:", reply_markup=None)
     await callback.answer()
     await state.set_state(SurveyStates.phone_number)
 
@@ -253,7 +253,7 @@ async def phone_number(message: Message, state: FSMContext):
 async def skip_phone(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["phone_number"] = None
-    await callback.message.reply("Введите ваш email:")
+    await callback.message.edit_text("Введите ваш email:", reply_markup=None)
     await callback.answer()
     await state.set_state(SurveyStates.email)
 
@@ -397,7 +397,7 @@ async def implementation_stage(callback: CallbackQuery, state: FSMContext):
     options = get_page_options(current_page)
     options_text = "\n".join([f"{opt['label']} {opt['description']}" for opt in options])
     keyboard = create_pagination_keyboard(current_page)
-    await callback.message.reply(
+    await callback.message.edit_text(
         f"4. Основные направления «болей» с которыми столкнулось ваше предприятие?\n\n{options_text}",
         reply_markup=keyboard
     )
@@ -421,7 +421,7 @@ async def pain_points_next(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(SurveyStates.pain_points_page, F.data == "other")
 async def pain_points_other(callback: CallbackQuery, state: FSMContext):
-    await callback.message.reply("Введите ваш вариант:")
+    await callback.message.edit_text("Введите ваш вариант:", reply_markup=None)
     await callback.answer()
     await state.set_state(SurveyStates.pain_points_other)
 
@@ -469,7 +469,7 @@ async def pain_points_choose(callback: CallbackQuery, state: FSMContext):
     options = get_page_options(current_page)
     buttons = {opt["label"]: opt["callback_data"] for opt in options}
     keyboard = create_inline_keyboard(buttons, 1)
-    await callback.message.reply("Выберите один из вариантов:", reply_markup=keyboard)
+    await callback.message.edit_text("Выберите один из вариантов:", reply_markup=keyboard)
     await callback.answer()
     await state.set_state(SurveyStates.pain_points_selection)
 
@@ -671,10 +671,9 @@ async def main_barrier(callback: CallbackQuery, state: FSMContext):
         await callback.message.reply(f"Ошибка при сохранении ответа: {str(e)}")
         await state.clear()
         return
-    keyboard = create_inline_keyboard(DIRECT_REPLACEMENT_BUTTONS, 2)
-    await callback.message.reply(
+    await callback.message.edit_text(
         "6. Насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО? (аналог «один в один»)",
-        reply_markup=keyboard
+        reply_markup=create_inline_keyboard(DIRECT_REPLACEMENT_BUTTONS, 2)
     )
     await callback.answer()
     await state.set_state(SurveyStates.direct_replacement)
@@ -707,13 +706,12 @@ async def direct_replacement(callback: CallbackQuery, state: FSMContext):
         await state.clear()
         return
     if callback.data == "other_repl":
-        await callback.message.reply("Введите свой вариант:")
+        await callback.message.edit_text("Введите свой вариант:", reply_markup=None)
         await state.set_state(SurveyStates.direct_replacement_details)
     else:
-        keyboard = create_inline_keyboard(YES_NO_DEPENDS_BUTTONS, 2)
-        await callback.message.reply(
+        await callback.message.edit_text(
             "7. Готовы ли вы выделить ресурсы (время специалистов, тестовый контур) для пилотного тестирования потенциальных российских решений?",
-            reply_markup=keyboard
+            reply_markup=create_inline_keyboard(YES_NO_DEPENDS_BUTTONS, 2)
         )
         await state.set_state(SurveyStates.pilot_testing)
     await callback.answer()
@@ -745,10 +743,9 @@ async def direct_replacement_details(message: Message, state: FSMContext):
         await message.reply(f"Ошибка при сохранении ответа: {str(e)}")
         await state.clear()
         return
-    keyboard = create_inline_keyboard(YES_NO_DEPENDS_BUTTONS, 2)
     await message.reply(
         "7. Готовы ли вы выделить ресурсы (время специалистов, тестовый контур) для пилотного тестирования потенциальных российских решений?",
-        reply_markup=keyboard
+        reply_markup=create_inline_keyboard(YES_NO_DEPENDS_BUTTONS, 2)
     )
     await state.set_state(SurveyStates.pilot_testing)
 
@@ -779,10 +776,9 @@ async def pilot_testing(callback: CallbackQuery, state: FSMContext):
         await callback.message.reply(f"Ошибка при сохранении ответа: {str(e)}")
         await state.clear()
         return
-    keyboard = create_inline_keyboard(PILOT_TESTING_BUTTONS, 2)
-    await callback.message.reply(
+    await callback.message.edit_text(
         "8. Какие классы ПО вы бы хотели протестировать? (выберите или укажите текстом)",
-        reply_markup=keyboard
+        reply_markup=create_inline_keyboard(PILOT_TESTING_BUTTONS, 2)
     )
     await callback.answer()
     await state.set_state(SurveyStates.software_classes)
@@ -827,10 +823,9 @@ async def software_classes(callback: CallbackQuery, state: FSMContext):
             }
             await create_survey_answer(survey_answer_data)
             
-            keyboard = create_inline_keyboard(YES_NO_BUTTONS, 2)
-            await callback.message.reply(
+            await callback.message.edit_text(
                 "9. Интересно ли вам участие в мероприятии, где можно пообщаться напрямую с разработчиками российского ПО?",
-                reply_markup=keyboard
+                reply_markup=create_inline_keyboard(YES_NO_BUTTONS, 2)
             )
             await state.set_state(SurveyStates.event_interest)
             
@@ -839,7 +834,7 @@ async def software_classes(callback: CallbackQuery, state: FSMContext):
             await state.clear()
             return
     else:
-        await callback.message.reply("Введите свой вариант:")
+        await callback.message.edit_text("Введите свой вариант:", reply_markup=None)
         await state.set_state(SurveyStates.software_classes_details)
     
     await callback.answer()
@@ -875,10 +870,9 @@ async def software_classes_details(message: Message, state: FSMContext):
         await message.reply(f"Ошибка при сохранении ответа: {str(e)}")
         await state.clear()
         return
-    keyboard = create_inline_keyboard(YES_NO_BUTTONS, 2)
     await message.reply(
         "9. Интересно ли вам участие в мероприятии, где можно пообщаться напрямую с разработчиками российского ПО?",
-        reply_markup=keyboard
+        reply_markup=create_inline_keyboard(YES_NO_BUTTONS, 2)
     )
     await state.set_state(SurveyStates.event_interest)
 
@@ -909,10 +903,9 @@ async def event_interest(callback: CallbackQuery, state: FSMContext):
         await callback.message.reply(f"Ошибка при сохранении ответа: {str(e)}")
         await state.clear()
         return
-    keyboard = create_inline_keyboard(YES_NO_BUTTONS, 2)
-    await callback.message.reply(
+    await callback.message.edit_text(
         "10. Хотели ли бы вы, чтобы вам помогли подобрать российское решение под ваш профиль?",
-        reply_markup=keyboard
+        reply_markup=create_inline_keyboard(YES_NO_BUTTONS, 2)
     )
     await callback.answer()
     await state.set_state(SurveyStates.solution_help)
@@ -944,7 +937,7 @@ async def solution_help(callback: CallbackQuery, state: FSMContext):
         await callback.message.reply(f"Ошибка при сохранении ответа: {str(e)}")
         await state.clear()
         return
-    await callback.message.reply("Спасибо, что прошли наш опрос!")
+    await callback.message.edit_text("Спасибо, что прошли наш опрос!", reply_markup=None)
     await callback.answer()
     await state.clear()
 
