@@ -227,14 +227,14 @@ async def skip_full_name(callback: CallbackQuery, state: FSMContext):
 async def position(message: Message, state: FSMContext):
     user_id = message.from_user.id
     user_responses[user_id]["position"] = message.text
-    await message.reply("Введите ваш рабочий телефон:")
+    await message.reply("Введите телефон для связи:")
     await state.set_state(SurveyStates.phone_number)
 
 @router.callback_query(SurveyStates.position, F.data == "skip_position")
 async def skip_position(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["position"] = None
-    await callback.message.edit_text("Введите ваш рабочий телефон:", reply_markup=None)
+    await callback.message.edit_text("Введите телефон для связи:", reply_markup=None)
     await callback.answer()
     await state.set_state(SurveyStates.phone_number)
 
@@ -243,17 +243,17 @@ async def phone_number(message: Message, state: FSMContext):
     user_id = message.from_user.id
     phone = message.text.strip()
     if not re.match(r'^\+?\d+$', phone):
-        await message.reply("Пожалуйста, введите рабочий телефон, содержащий только цифры (можно с ведущим +).")
+        await message.reply("Пожалуйста, введите телефон, содержащий только цифры (можно с ведущим +).")
         return
     user_responses[user_id]["phone_number"] = encrypt_data(phone)
-    await message.reply("Введите ваш email:")
+    await message.reply("Введите email вашей компании для связи:")
     await state.set_state(SurveyStates.email)
 
 @router.callback_query(SurveyStates.phone_number, F.data == "skip_phone")
 async def skip_phone(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["phone_number"] = None
-    await callback.message.edit_text("Введите ваш email:", reply_markup=None)
+    await callback.message.edit_text("Введите email вашей компании для связи:", reply_markup=None)
     await callback.answer()
     await state.set_state(SurveyStates.email)
 
