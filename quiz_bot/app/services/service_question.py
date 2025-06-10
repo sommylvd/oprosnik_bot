@@ -40,3 +40,7 @@ async def get_all(session: AsyncSession) -> list[Questions] | object:
         list[Questions] | object: Список объектов вопросов или объект ошибки при неудаче.
     """
     return await crud.get_all(session)
+
+async def update(session: AsyncSession, question_id: int, data: QuestionCreate)-> Questions | object:
+
+    return await crud.update(session, question_id, data)

@@ -8,7 +8,7 @@ from sqlalchemy.future import select
 from sqlalchemy.exc import (DataError, ProgrammingError, SQLAlchemyError, IntegrityError)
 
 from app.db.models import Enterprises
-from app.db.schemas.enterprise import EnterpriseOut, EnterpriseCreate
+from app.db.schemas.enterprise import EnterpriseOut, EnterpriseCreate, EnterpriseUpdate
 
 async def create(session: AsyncSession, data: EnterpriseCreate) -> EnterpriseOut | object:
     """
@@ -39,7 +39,7 @@ async def create(session: AsyncSession, data: EnterpriseCreate) -> EnterpriseOut
             "time": datetime.now().isoformat(),
         }))
         return []
-    except (ValueError, DataError, ProgrammingError, SQLAlchemyError) as e:
+    except Exception as e:
         await session.rollback()
         logging.error(json.dumps({
             "message": "Ошибка создания предприятия",
@@ -49,7 +49,7 @@ async def create(session: AsyncSession, data: EnterpriseCreate) -> EnterpriseOut
         }))
         return []
     
-async def get(session: AsyncSession, id: int) -> EnterpriseOut | object:
+async def get(session: AsyncSession, id: int, as_pydantic: bool = True) -> EnterpriseOut | object:
     """
     Получает предприятие по ID из базы данных.
 
@@ -65,8 +65,10 @@ async def get(session: AsyncSession, id: int) -> EnterpriseOut | object:
     try:
         result = await session.execute(select(Enterprises).where(Enterprises.id == id))
         enterprise = result.scalar_one_or_none()
+        if as_pydantic is False:
+            return enterprise if enterprise else None
         return enterprise.to_pydantic() if enterprise else None
-    except SQLAlchemyError as e:
+    except Exception as e:
         logging.error(json.dumps({
             "message": "Ошибка получения предприятия",
             "enterprise_id": id,
@@ -89,9 +91,44 @@ async def get_all(session: AsyncSession) -> list[EnterpriseOut] | object:
         result = await session.execute(select(Enterprises))
         enterprises = result.scalars().all()
         return [enterprise.to_pydantic() for enterprise in enterprises]
-    except SQLAlchemyError as e:
+    except Exception as e:
         logging.error(json.dumps({
             "message": "Ошибка получения списка предприятий",
+            "error": str(e),
+            "time": datetime.now().isoformat(),
+        }))
+        return []
+    
+async def update(session: AsyncSession, id: int, data: EnterpriseUpdate) -> EnterpriseOut | object:
+    if id < 1:
+        return None
+    try:
+
+        enterprise = await get(session, id, False)
+        if not enterprise:
+            return None
+        
+        for key, value in data.model_dump(exclude_unset=True).items():
+            setattr(enterprise, key, value)
+        
+        await session.commit()
+        await session.refresh(enterprise)
+        return enterprise.to_pydantic()
+    
+    except IntegrityError as e:
+        await session.rollback()
+        logging.error(json.dumps({
+            "message": "Такой ИНН уже существует",
+            "data": enterprise.model_dump(),
+            "error": str(e),
+            "time": datetime.now().isoformat(),
+        }))
+        return []
+    except Exception as e:
+        await session.rollback()
+        logging.error(json.dumps({
+            "message": "Ошибка создания предприятия",
+            "data": enterprise.model_dump(),
             "error": str(e),
             "time": datetime.now().isoformat(),
         }))

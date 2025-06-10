@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud import crud_respondent as crud
-from app.db.schemas.respondent import RespondentCreate
+from app.db.schemas.respondent import RespondentCreate, RespondentUpdate
 from app.db.models import Respondents 
 
 async def create(session: AsyncSession, data: RespondentCreate)-> Respondents | object:
@@ -40,3 +40,7 @@ async def get_all(session: AsyncSession) -> list[Respondents] | object:
         list[Respondents] | list: Список респондентов или пустой список при ошибке.
     """
     return await crud.get_all(session)
+
+async def update(session: AsyncSession, respondent_id: int, data: RespondentUpdate) -> Respondents | object:
+
+    return await crud.update(session, respondent_id, data)

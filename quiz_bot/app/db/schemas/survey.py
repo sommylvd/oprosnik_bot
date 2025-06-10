@@ -11,6 +11,9 @@ class SurveyBase(BaseModel):
 class SurveyCreate(SurveyBase):
     pass
 
+class SurveyUpdate(BaseModel):
+    completed_at: Optional[datetime] = None
+
 class SurveyOut(SurveyBase):
     id: int
     class Config:

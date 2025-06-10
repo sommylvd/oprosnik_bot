@@ -10,6 +10,11 @@ class EnterpriseBase(BaseModel):
 class EnterpriseCreate(EnterpriseBase):
     pass
 
+class EnterpriseUpdate(BaseModel):
+    name: str
+    inn: str
+    short_name: str
+
 class EnterpriseOut(EnterpriseBase):
     id: int
     create_at: datetime

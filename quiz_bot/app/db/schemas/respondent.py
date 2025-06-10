@@ -12,6 +12,13 @@ class RespondentBase(BaseModel):
 class RespondentCreate(RespondentBase):
     pass
 
+class RespondentUpdate(BaseModel):
+    enterprise_id: int
+    full_name: str
+    position: str
+    phone: str
+    email: str
+
 class RespondentOut(RespondentBase):
     id: int
     create_at: datetime

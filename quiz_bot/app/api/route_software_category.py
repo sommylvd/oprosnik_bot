@@ -4,7 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.schemas.software_category import SoftwareCategoryCreate, SoftwareCategoryOut
+from app.db.schemas.software_category import SoftwareCategoryCreate, SoftwareCategoryOut, SoftwareCategoryUpdate
 from app.db import get_db 
 from app.services import service_software_category as service
 
@@ -74,6 +74,19 @@ async def get_all(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         logging.error(json.dumps({
             "message": "Ошибка при получении категорий ПО на стороне API",
+            "error": str(e),
+            "time": datetime.now().isoformat(),
+        }))
+
+@router.put('/', response_model=SoftwareCategoryOut)
+async def update(software_category_id: int, data: SoftwareCategoryUpdate, db: AsyncSession = Depends(get_db)):
+    try:
+        return await service.update(db, software_category_id, data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(json.dumps({
+            "message": "Ошибка при обновлении категории ПО на стороне API",
             "error": str(e),
             "time": datetime.now().isoformat(),
         }))

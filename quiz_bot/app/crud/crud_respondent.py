@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy.exc import (DataError, ProgrammingError, SQLAlchemyError, IntegrityError)
 
 from app.db.models import Respondents
-from app.db.schemas.respondent import RespondentOut, RespondentCreate
+from app.db.schemas.respondent import RespondentOut, RespondentCreate, RespondentUpdate
 
 async def create(session: AsyncSession, data: RespondentCreate) -> RespondentOut | object:
     """
@@ -27,7 +27,7 @@ async def create(session: AsyncSession, data: RespondentCreate) -> RespondentOut
         await session.commit()
         await session.refresh(respondent)
         return respondent.to_pydantic()
-    except (ValueError, DataError, ProgrammingError, SQLAlchemyError) as e:
+    except Exception as e:
         await session.rollback()
         logging.error(json.dumps({
             "message": "Ошибка создания респондента",
@@ -37,7 +37,7 @@ async def create(session: AsyncSession, data: RespondentCreate) -> RespondentOut
         }))
         return []
     
-async def get(session: AsyncSession, id: int) -> RespondentOut | object:
+async def get(session: AsyncSession, id: int, as_pydantic: bool = True) -> RespondentOut | object:
     """
     Получает респондента по его идентификатору.
 
@@ -53,8 +53,10 @@ async def get(session: AsyncSession, id: int) -> RespondentOut | object:
     try:
         result = await session.execute(select(Respondents).where(Respondents.id == id))
         respondent = result.scalar_one_or_none()
+        if as_pydantic is False:
+            return respondent if respondent else None
         return respondent.to_pydantic() if respondent else None
-    except SQLAlchemyError as e:
+    except Exception as e:
         logging.error(json.dumps({
             "message": "Ошибка получения респондента",
             "respondent_id": id,
@@ -77,9 +79,35 @@ async def get_all(session: AsyncSession) -> list[RespondentOut] | object:
         result = await session.execute(select(Respondents))
         respondents = result.scalars().all()
         return [respondent.to_pydantic() for respondent in respondents]
-    except SQLAlchemyError as e:
+    except Exception as e:
         logging.error(json.dumps({
             "message": "Ошибка получения списка респондентов",
+            "error": str(e),
+            "time": datetime.now().isoformat(),
+        }))
+        return []
+    
+async def update(session: AsyncSession, id: int, data: RespondentUpdate) -> RespondentOut | object:
+    if id < 1:
+        return None
+    try:
+
+        respondent = await get(session, id, False)
+        if not respondent:
+            return None
+        
+        for key, value in data.model_dump(exclude_unset=True).items():
+            setattr(respondent, key, value)
+        
+        await session.commit()
+        await session.refresh(respondent)
+        return respondent.to_pydantic()
+    
+    except Exception as e:
+        await session.rollback()
+        logging.error(json.dumps({
+            "message": "Ошибка создания респондента",
+            "data": respondent.model_dump(),
             "error": str(e),
             "time": datetime.now().isoformat(),
         }))

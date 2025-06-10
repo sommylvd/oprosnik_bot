@@ -9,6 +9,9 @@ class SoftwareCategoryBase(BaseModel):
 class SoftwareCategoryCreate(SoftwareCategoryBase):
     pass
 
+class SoftwareCategoryUpdate(SoftwareCategoryBase):
+    pass
+
 class SoftwareCategoryOut(SoftwareCategoryBase):
     id: int
     class Config:

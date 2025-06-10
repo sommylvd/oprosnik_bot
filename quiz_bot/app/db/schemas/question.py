@@ -10,6 +10,9 @@ class QuestionBase(BaseModel):
 class QuestionCreate(QuestionBase):
     pass
 
+class QuestionUpdate(QuestionBase):
+    pass
+
 class QuestionOut(QuestionBase):
     id: int
     class Config:

@@ -8,7 +8,7 @@ from sqlalchemy.future import select
 from sqlalchemy.exc import (DataError, ProgrammingError, SQLAlchemyError, IntegrityError)
 
 from app.db.models import Surveys
-from app.db.schemas.survey import SurveyOut, SurveyCreate
+from app.db.schemas.survey import SurveyOut, SurveyCreate, SurveyUpdate
 
 async def parse_naive_datetime(date_input: str | datetime) -> datetime:
     """
@@ -54,7 +54,7 @@ async def create(session: AsyncSession, data: SurveyCreate) -> SurveyOut | objec
         await session.commit()
         await session.refresh(survey)
         return survey.to_pydantic()
-    except (ValueError, DataError, ProgrammingError, SQLAlchemyError) as e:
+    except Exception as e:
         await session.rollback()
         logging.error(json.dumps({
             "message": "Ошибка создания опроса",
@@ -64,7 +64,7 @@ async def create(session: AsyncSession, data: SurveyCreate) -> SurveyOut | objec
         }))
         return []
     
-async def get(session: AsyncSession, id: int) -> SurveyOut | object:
+async def get(session: AsyncSession, id: int, as_pydantic: bool = True) -> SurveyOut | object:
     """
     Получает опрос по его идентификатору.
 
@@ -80,8 +80,10 @@ async def get(session: AsyncSession, id: int) -> SurveyOut | object:
     try:
         result = await session.execute(select(Surveys).where(Surveys.id == id))
         survey = result.scalar_one_or_none()
+        if as_pydantic is False:
+            return survey if survey else None
         return survey.to_pydantic() if survey else None
-    except SQLAlchemyError as e:
+    except Exception as e:
         logging.error(json.dumps({
             "message": "Ошибка получения опроса",
             "survey_id": id,
@@ -104,9 +106,40 @@ async def get_all(session: AsyncSession) -> list[SurveyOut] | object:
         result = await session.execute(select(Surveys))
         surveys = result.scalars().all()
         return [survey.to_pydantic() for survey in surveys]
-    except SQLAlchemyError as e:
+    except Exception as e:
         logging.error(json.dumps({
             "message": "Ошибка получения списка опросов",
+            "error": str(e),
+            "time": datetime.now().isoformat(),
+        }))
+        return []
+
+async def update(session: AsyncSession, id: int, data: SurveyUpdate) -> SurveyOut | object:
+    if id < 1:
+        return None
+    try:
+
+        survey = await get(session, id, False)
+        if not survey:
+            return None
+        
+        updates = data.model_dump(exclude_unset=True)
+
+        if "completed_at" in updates:
+           updates['completed_at'] = await parse_naive_datetime(updates["completed_at"])
+
+        for key, value in updates.items():
+            setattr(survey, key, value)
+        
+        await session.commit()
+        await session.refresh(survey)
+        return survey.to_pydantic()
+    
+    except Exception as e:
+        await session.rollback()
+        logging.error(json.dumps({
+            "message": "Ошибка обновлении ответа на вопрос",
+            "data": survey.model_dump(),
             "error": str(e),
             "time": datetime.now().isoformat(),
         }))

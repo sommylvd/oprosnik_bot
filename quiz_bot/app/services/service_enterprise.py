@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud import crud_enterprise as crud
-from app.db.schemas.enterprise import EnterpriseCreate
+from app.db.schemas.enterprise import EnterpriseCreate, EnterpriseUpdate
 from app.db.models import Enterprises
 
 async def create(session: AsyncSession, data: EnterpriseCreate)-> Enterprises | object:
@@ -40,3 +40,7 @@ async def get_all(session: AsyncSession) -> list[Enterprises] | object:
         list[Enterprises] | list: Список предприятий или пустой список при ошибке.
     """
     return await crud.get_all(session)
+
+async def update(session: AsyncSession, enterprise_id: int, data: EnterpriseUpdate)-> Enterprises | object:
+
+    return await crud.update(session, enterprise_id, data)

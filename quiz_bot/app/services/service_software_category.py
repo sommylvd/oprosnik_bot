@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud import crud_software_category as crud
-from app.db.schemas.software_category import SoftwareCategoryCreate
+from app.db.schemas.software_category import SoftwareCategoryCreate, SoftwareCategoryUpdate
 from app.db.models import SoftwareCategories
 
 async def create(session: AsyncSession, data: SoftwareCategoryCreate)-> SoftwareCategories | object:
@@ -43,3 +43,7 @@ async def get_all(session: AsyncSession) -> list[SoftwareCategories] | object:
         object: Альтернативный тип при ошибке.
     """
     return await crud.get_all(session)
+
+async def update(session: AsyncSession, software_category_id: int, data: SoftwareCategoryUpdate) -> SoftwareCategories | object:
+
+    return await crud.update(session, software_category_id, data)

@@ -4,7 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.schemas.enterprise import EnterpriseCreate, EnterpriseOut
+from app.db.schemas.enterprise import EnterpriseCreate, EnterpriseOut, EnterpriseUpdate
 from app.db import get_db 
 from app.services import service_enterprise as service
 
@@ -74,6 +74,17 @@ async def get_all(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         logging.error(json.dumps({
             "message": "Ошибка при получении предприятия на стороне API",
+            "error": str(e),
+            "time": datetime.now().isoformat(),
+        }))
+
+@router.put('/', response_model=EnterpriseOut)
+async def update(data: EnterpriseUpdate, enterprise_id: int, db: AsyncSession = Depends(get_db)):
+    try:
+        return await service.update(db, enterprise_id, data)
+    except HTTPException as e:
+        logging.error(json.dumps({
+            "message": "Ошибка при обнолвении предприятия на стороне API",
             "error": str(e),
             "time": datetime.now().isoformat(),
         }))

@@ -10,6 +10,9 @@ class SurveyAnswerBase(BaseModel):
 class SurveyAnswerCreate(SurveyAnswerBase):
     pass
 
+class SurveyAnswerUpdate(BaseModel):
+    answer: dict
+
 class SurveyAnswerOut(SurveyAnswerBase):
     id: int
     created_at: datetime

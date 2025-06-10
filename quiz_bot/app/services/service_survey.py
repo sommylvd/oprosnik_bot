@@ -40,3 +40,7 @@ async def get_all(session: AsyncSession) -> list[Surveys] | object:
         list[Surveys] | list: Список опросов или пустой список при ошибке.
     """
     return await crud.get_all(session)
+
+async def update(session: AsyncSession, survey_id: int, data: SurveyCreate)-> Surveys | object:
+
+    return await crud.update(session, survey_id, data)

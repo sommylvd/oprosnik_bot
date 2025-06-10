@@ -4,7 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.schemas.respondent import RespondentCreate, RespondentOut
+from app.db.schemas.respondent import RespondentCreate, RespondentOut, RespondentUpdate
 from app.db import get_db 
 from app.services import service_respondent as service
 
@@ -74,6 +74,19 @@ async def get_all(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         logging.error(json.dumps({
             "message": "Ошибка при получении респондентов на стороне API",
+            "error": str(e),
+            "time": datetime.now().isoformat(),
+        }))
+
+@router.put('/', response_model=RespondentOut)
+async def update(respondent_id: int, data: RespondentUpdate, db: AsyncSession = Depends(get_db)):
+    try:
+        return await service.update(db, respondent_id, data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(json.dumps({
+            "message": "Ошибка при обновлении респондента на стороне API",
             "error": str(e),
             "time": datetime.now().isoformat(),
         }))

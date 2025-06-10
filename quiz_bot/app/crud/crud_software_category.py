@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy.exc import (DataError, ProgrammingError, SQLAlchemyError, IntegrityError)
 
 from app.db.models import SoftwareCategories
-from app.db.schemas.software_category import SoftwareCategoryOut, SoftwareCategoryCreate
+from app.db.schemas.software_category import SoftwareCategoryOut, SoftwareCategoryCreate, SoftwareCategoryUpdate
 
 async def create(session: AsyncSession, data: SoftwareCategoryCreate) -> SoftwareCategoryOut | object:
     """
@@ -36,7 +36,7 @@ async def create(session: AsyncSession, data: SoftwareCategoryCreate) -> Softwar
             "error": str(e),
             "time": datetime.now().isoformat(),
         }))
-    except (ValueError, DataError, ProgrammingError, SQLAlchemyError) as e:
+    except Exception as e:
         await session.rollback()
         logging.error(json.dumps({
             "message": "Ошибка создания категории ПО",
@@ -46,7 +46,7 @@ async def create(session: AsyncSession, data: SoftwareCategoryCreate) -> Softwar
         }))
         return []
     
-async def get(session: AsyncSession, id: int) -> SoftwareCategoryOut | object:
+async def get(session: AsyncSession, id: int, as_pydantic: bool = True) -> SoftwareCategoryOut | object:
     """
     Получает категорию программного обеспечения по её ID.
 
@@ -63,8 +63,10 @@ async def get(session: AsyncSession, id: int) -> SoftwareCategoryOut | object:
     try:
         result = await session.execute(select(SoftwareCategories).where(SoftwareCategories.id == id))
         soft_cat = result.scalar_one_or_none()
+        if as_pydantic is False:
+            return soft_cat if soft_cat else None
         return soft_cat.to_pydantic() if soft_cat else None
-    except SQLAlchemyError as e:
+    except Exception as e:
         logging.error(json.dumps({
             "message": "Ошибка получения категории ПО",
             "soft_cat_id": id,
@@ -88,9 +90,35 @@ async def get_all(session: AsyncSession) -> list[SoftwareCategoryOut] | object:
         result = await session.execute(select(SoftwareCategories))
         soft_cats = result.scalars().all()
         return [soft_cat.to_pydantic() for soft_cat in soft_cats]
-    except SQLAlchemyError as e:
+    except Exception as e:
         logging.error(json.dumps({
             "message": "Ошибка получения списка категорий ПО",
+            "error": str(e),
+            "time": datetime.now().isoformat(),
+        }))
+        return []
+    
+async def update(session: AsyncSession, id: int, data: SoftwareCategoryUpdate) -> SoftwareCategoryOut | object:
+    if id < 1:
+        return None
+    try:
+
+        soft_cat = await get(session, id, False)
+        if not soft_cat:
+            return None
+        
+        for key, value in data.model_dump(exclude_unset=True).items():
+            setattr(soft_cat, key, value)
+        
+        await session.commit()
+        await session.refresh(soft_cat)
+        return soft_cat.to_pydantic()
+    
+    except Exception as e:
+        await session.rollback()
+        logging.error(json.dumps({
+            "message": "Ошибка создания категории ПО",
+            "data": soft_cat.model_dump(),
             "error": str(e),
             "time": datetime.now().isoformat(),
         }))
