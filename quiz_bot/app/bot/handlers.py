@@ -309,7 +309,7 @@ async def pain_points_choose(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(SurveyStates.pain_points_selection, F.data == "other")
 async def pain_points_other(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
-    await callback.message.edit_text("2. Введите ваш вариант:", reply_markup=create_inline_keyboard({}, 2))
+    await callback.message.edit_text("2. Введите основные направления «болей» с которыми столкнулось ваше предприятие", reply_markup=create_inline_keyboard({}, 2))
     await callback.answer()
     await state.set_state(SurveyStates.pain_points_other)
     user_responses[user_id]["state_history"].append(SurveyStates.pain_points_other)
@@ -586,7 +586,7 @@ async def direct_replacement(callback: CallbackQuery, state: FSMContext):
         await state.clear()
         return
     if callback.data == "other_repl":
-        await callback.message.edit_text("4. Введите свой вариант:", reply_markup=create_inline_keyboard({}, 2))
+        await callback.message.edit_text("4. Введите насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО", reply_markup=create_inline_keyboard({}, 2))
         await state.set_state(SurveyStates.direct_replacement_details)
         user_responses[user_id]["state_history"].append(SurveyStates.direct_replacement_details)
     else:
@@ -721,7 +721,7 @@ async def software_classes(callback: CallbackQuery, state: FSMContext):
             await state.clear()
             return
     else:
-        await callback.message.edit_text("6. Введите свой вариант:", reply_markup=create_inline_keyboard({}, 2))
+        await callback.message.edit_text("6. Введите какие классы ПО вы бы хотели протестировать", reply_markup=create_inline_keyboard({}, 2))
         await state.set_state(SurveyStates.software_classes_details)
         user_responses[user_id]["state_history"].append(SurveyStates.software_classes_details)
     await callback.answer()
