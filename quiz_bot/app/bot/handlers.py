@@ -351,7 +351,7 @@ async def pain_points_other_input(message: Message, state: FSMContext):
     await state.set_state(SurveyStates.main_barrier)
     user_responses[user_id]["state_history"].append(SurveyStates.main_barrier)
 
-@router.callback_query(SurveyStates.pain_points_selection)
+@router.callback_query(SurveyStates.pain_points_selection, ~F.data.startswith("back_"))
 async def pain_points_selection(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     selected_option = callback.data
