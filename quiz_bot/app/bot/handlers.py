@@ -23,7 +23,7 @@ from cryptography.fernet import Fernet
 import base64
 import re
 from datetime import datetime
-from app.bot.con_funcs.enterprise import create_enterprise
+from app.bot.con_funcs.enterprise import *
 from app.bot.con_funcs.respondent import create_respondent
 from app.bot.con_funcs.survey import create_survey
 from app.bot.con_funcs.survey_answer import create_survey_answer
@@ -102,23 +102,6 @@ PAIN_POINTS_PAGES = [
 
 ITEMS_PER_PAGE = 3
 
-def create_pagination_keyboard(current_page: int) -> InlineKeyboardMarkup:
-    buttons = []
-    nav_row = []
-    if current_page > 0:
-        nav_row.append(InlineKeyboardButton(text="<", callback_data=f"prev_{current_page}", disable=True if current_page == 0 else False))
-    nav_row.append(InlineKeyboardButton(text="Выбрать", callback_data=f"choose_{current_page}", disable=True))
-    if current_page < (len(PAIN_POINTS_PAGES) - 1) // ITEMS_PER_PAGE:
-        nav_row.append(InlineKeyboardButton(text=">", callback_data=f"next_{current_page}", disable=True if current_page >= (len(PAIN_POINTS_PAGES) - 1) // ITEMS_PER_PAGE else False))
-    buttons.append(nav_row)
-    buttons.append([InlineKeyboardButton(text="Другое", callback_data="other", disable=True)])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-def get_page_options(current_page: int) -> list:
-    start_idx = current_page * ITEMS_PER_PAGE
-    end_idx = start_idx + ITEMS_PER_PAGE
-    return PAIN_POINTS_PAGES[start_idx:end_idx]
-
 @router.message(Command("start"))
 async def start(message: Message, state: FSMContext):
     user_id = message.from_user.id
@@ -138,7 +121,11 @@ async def consent_agree(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(SurveyStates.consent, F.data == "consent_disagree")
 async def consent_disagree(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text("Вы не согласились на обработку персональных данных. Опрос завершен.", reply_markup=None)
+    await callback.message.edit_text(
+        "Вы не дали согласие на обработку персональных данных. Опрос завершен.\n"
+        "Для повторного прохождения опроса нажмите «Меню» и выберите команду /start.",
+        reply_markup=None
+    )
     await callback.answer()
     await state.clear()
 
@@ -153,14 +140,6 @@ async def company_name(message: Message, state: FSMContext):
     await message.reply("Введите ИНН вашей компании:")
     await state.set_state(SurveyStates.company_inn)
 
-@router.callback_query(SurveyStates.company_name, F.data == "skip_company_name")
-async def skip_company_name(callback: CallbackQuery, state: FSMContext):
-    user_id = callback.from_user.id
-    user_responses[user_id]["company_name"] = None
-    await callback.message.edit_text("Название компании обязательно. Пожалуйста, введите название компании.", reply_markup=None)
-    await callback.answer()
-    await state.set_state(SurveyStates.company_name)
-
 @router.message(SurveyStates.company_inn)
 async def company_inn(message: Message, state: FSMContext):
     user_id = message.from_user.id
@@ -168,8 +147,19 @@ async def company_inn(message: Message, state: FSMContext):
     if inn and not re.match(r'^\d{10}$|^\d{12}$', inn):
         await message.reply("Пожалуйста, введите ИНН из 10 или 12 цифр.")
         return
+    
+    # Проверка существования ИНН
+    try:
+        enterprises = await get_enterprises()
+        if any(enterprise.get("inn") == inn for enterprise in enterprises):
+            await message.reply("Этот ИНН уже зарегистрирован в системе. Введите другой номер или проверьте правильность данных:")
+            return  # Остаемся в состоянии company_inn для повторного ввода
+    except Exception as e:
+        await message.reply(f"Ошибка при проверке ИНН: {str(e)}")
+        await state.clear()
+        return
+
     user_responses[user_id]["company_inn"] = inn if inn else None
-    # Сохранение данных предприятия
     enterprise_data = {
         "name": user_responses[user_id]["company_name"],
         "inn": user_responses[user_id]["company_inn"] or "",
@@ -179,90 +169,55 @@ async def company_inn(message: Message, state: FSMContext):
     try:
         enterprise = await create_enterprise(enterprise_data)
         user_responses[user_id]["enterprise_id"] = enterprise.get("id") if enterprise else None
-    except Exception as e:
+        await message.reply("Введите ваше ФИО (полностью):")
+        await state.set_state(SurveyStates.full_name)
+    except httpx.HTTPStatusError as e:
         await message.reply(f"Ошибка при создании предприятия: {str(e)}")
         await state.clear()
         return
-    await message.reply("Введите ваше ФИО (полностью):")
-    await state.set_state(SurveyStates.full_name)
 
-@router.callback_query(SurveyStates.company_inn, F.data == "skip_company_inn")
-async def skip_company_inn(callback: CallbackQuery, state: FSMContext):
-    user_id = callback.from_user.id
-    user_responses[user_id]["company_inn"] = None
-    # Сохранение данных предприятия
-    enterprise_data = {
-        "name": user_responses[user_id]["company_name"],
-        "inn": user_responses[user_id]["company_inn"] or "",
-        "short_name": "none",
-        "is_active": True
-    }
-    try:
-        enterprise = await create_enterprise(enterprise_data)
-        user_responses[user_id]["enterprise_id"] = enterprise.get("id") if enterprise else None
-    except Exception as e:
-        await callback.message.reply(f"Ошибка при создании предприятия: {str(e)}")
-        await state.clear()
-        return
-    await callback.message.edit_text("Введите ваше ФИО (полностью):", reply_markup=None)
-    await callback.answer()
-    await state.set_state(SurveyStates.full_name)
 
 @router.message(SurveyStates.full_name)
 async def full_name(message: Message, state: FSMContext):
     user_id = message.from_user.id
-    user_responses[user_id]["full_name"] = message.text
+    full_name = message.text.strip()
+    words = full_name.split()
+    if len(words) != 3 or any(len(word) < 2 for word in words):
+        await message.reply("Пожалуйста, введите ФИО полностью (фамилия, имя, отчество, каждое не короче 2 символов).")
+        return
+    user_responses[user_id]["full_name"] = full_name
     await message.reply("Введите вашу должность:")
-    await state.set_state(SurveyStates.position)
-
-@router.callback_query(SurveyStates.full_name, F.data == "skip_full_name")
-async def skip_full_name(callback: CallbackQuery, state: FSMContext):
-    user_id = callback.from_user.id
-    user_responses[user_id]["full_name"] = None
-    await callback.message.edit_text("Введите вашу должность:", reply_markup=None)
-    await callback.answer()
     await state.set_state(SurveyStates.position)
 
 @router.message(SurveyStates.position)
 async def position(message: Message, state: FSMContext):
     user_id = message.from_user.id
-    user_responses[user_id]["position"] = message.text
+    position = message.text.strip()
+    if len(position) < 3:
+        await message.reply("Пожалуйста, введите должность (не менее 3 символов).")
+        return
+    user_responses[user_id]["position"] = position
     await message.reply("Введите телефон для связи:")
     await state.set_state(SurveyStates.phone_number)
 
-@router.callback_query(SurveyStates.position, F.data == "skip_position")
-async def skip_position(callback: CallbackQuery, state: FSMContext):
-    user_id = callback.from_user.id
-    user_responses[user_id]["position"] = None
-    await callback.message.edit_text("Введите телефон для связи:", reply_markup=None)
-    await callback.answer()
-    await state.set_state(SurveyStates.phone_number)
 
 @router.message(SurveyStates.phone_number)
 async def phone_number(message: Message, state: FSMContext):
     user_id = message.from_user.id
     phone = message.text.strip()
-    if not re.match(r'^\+?\d+$', phone):
-        await message.reply("Пожалуйста, введите телефон, содержащий только цифры (можно с ведущим +).")
+    if not re.match(r'^(\+7|8)\d{10}$', phone):
+        await message.reply("Пожалуйста, введите телефон в формате +7 или 8, за которыми следуют 10 цифр (например, +79991234567).")
         return
     user_responses[user_id]["phone_number"] = encrypt_data(phone)
     await message.reply("Введите email вашей компании для связи:")
-    await state.set_state(SurveyStates.email)
-
-@router.callback_query(SurveyStates.phone_number, F.data == "skip_phone")
-async def skip_phone(callback: CallbackQuery, state: FSMContext):
-    user_id = callback.from_user.id
-    user_responses[user_id]["phone_number"] = None
-    await callback.message.edit_text("Введите email вашей компании для связи:", reply_markup=None)
-    await callback.answer()
     await state.set_state(SurveyStates.email)
 
 @router.message(SurveyStates.email)
 async def email(message: Message, state: FSMContext):
     user_id = message.from_user.id
     email_input = message.text.strip()
-    if '@' not in email_input:
-        await message.reply("Пожалуйста, введите email, содержащий символ @.")
+    if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email_input):
+        await message.reply("Пожалуйста, введите корректный email (например, user@domain.com).")
         return
     user_responses[user_id]["email"] = encrypt_data(email_input)
     # Сохранение данных респондента
@@ -317,69 +272,12 @@ async def email(message: Message, state: FSMContext):
     )
     await state.set_state(SurveyStates.implementation_stage)
 
-@router.callback_query(SurveyStates.email, F.data == "skip_email")
-async def skip_email(callback: CallbackQuery, state: FSMContext):
-    user_id = callback.from_user.id
-    user_responses[user_id]["email"] = None
-    # Сохранение данных респондента
-    phone = decrypt_data(user_responses[user_id]["phone_number"]) if user_responses[user_id]["phone_number"] else None
-    respondent_data = {
-        "full_name": user_responses[user_id]["full_name"],
-        "position": user_responses[user_id]["position"],
-        "phone": phone,
-        "email": None,
-        "enterprise_id": user_responses[user_id]["enterprise_id"]
-    }
-    try:
-        respondent = await create_respondent(respondent_data)
-        user_responses[user_id]["respondent_id"] = respondent.get("id") if respondent else None
-    except Exception as e:
-        await callback.message.reply(f"Ошибка при создании респондента: {str(e)}")
-        await state.clear()
-        return
-
-    # Создаем опрос после создания респондента
-    survey_data = {
-        "title": "Survey for user " + str(user_id),
-        "respondent_id": user_responses[user_id]["respondent_id"],
-        "started_at": datetime.utcnow().isoformat() + "Z",
-        "ip_address": "unknown",
-        "user_agent": "Telegram Bot"
-    }
-    try:
-        survey = await create_survey(survey_data)
-        user_responses[user_id]["survey_id"] = survey.get("id") if survey else None
-    except Exception as e:
-        await callback.message.reply(f"Ошибка при создании опроса: {str(e)}")
-        await state.clear()
-        return
-
-    # Создаем вопрос о стадии перехода
-    question_text = "1. На какой стадии перехода на отечественное ПО находится ваше предприятие?"
-    try:
-        question_data = {"text": question_text, "number": 1, "answer_type": "string"}
-        question = await create_question(question_data)
-        user_responses[user_id]["question_id"] = question.get("id")
-    except Exception as e:
-        await callback.message.reply(f"Ошибка при работе с вопросами: {str(e)}")
-        await state.clear()
-        return
-
-    keyboard = create_inline_keyboard(IMPLEMENTATION_STAGE_BUTTONS, 2)
-    await callback.message.reply(
-        question_text,
-        reply_markup=keyboard
-    )
-    await callback.answer()
-    await state.set_state(SurveyStates.implementation_stage)
-
 @router.callback_query(SurveyStates.implementation_stage, F.data.in_(IMPLEMENTATION_STAGE_BUTTONS.values()))
 async def implementation_stage(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     selected_stage = next((k for k, v in IMPLEMENTATION_STAGE_BUTTONS.items() if v == callback.data), None)
     user_responses[user_id]["implementation_stage"] = selected_stage
 
-    # Сохранение ответа на опрос
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
         "question_id": user_responses[user_id]["question_id"],
@@ -392,31 +290,23 @@ async def implementation_stage(callback: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
-    await state.update_data(current_page=0)
-    current_page = 0
-    options = get_page_options(current_page)
-    options_text = "\n".join([f"{opt['label']} {opt['description']}" for opt in options])
-    keyboard = create_pagination_keyboard(current_page)
+    options = PAIN_POINTS_PAGES
+    options_text = "\n".join([f"- {opt['label']} {opt['description']}" for opt in options])
+    buttons = {"Добавить": "choose_pain_points", "Другое": "other"}
+    keyboard = create_inline_keyboard(buttons, 2)
     await callback.message.edit_text(
-        f"4. Основные направления «болей» с которыми столкнулось ваше предприятие?\n\n{options_text}",
+        f"2. Основные направления «болей» с которыми столкнулось ваше предприятие?\n\n{options_text}\n\n"
+        "Нажмите кнопку «Добавить», чтобы выбрать подходящий вариант. Если нужного варианта нет — используйте кнопку «Другое» и укажите свой вариант вручную.",
         reply_markup=keyboard
     )
     await callback.answer()
-    await state.set_state(SurveyStates.pain_points_page)
+    await state.set_state(SurveyStates.pain_points_selection)
 
-@router.callback_query(SurveyStates.pain_points_page, F.data.startswith("next_"))
-async def pain_points_next(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    current_page = data.get("current_page", 0)
-    new_page = current_page + 1
-    await state.update_data(current_page=new_page)
-    options = get_page_options(new_page)
-    options_text = "\n".join([f"{opt['label']} {opt['description']}" for opt in options])
-    keyboard = create_pagination_keyboard(new_page)
-    await callback.message.edit_text(
-        f"4. Основные направления «болей» с которыми столкнулось ваше предприятие?\n\n{options_text}",
-        reply_markup=keyboard
-    )
+@router.callback_query(SurveyStates.pain_points_selection, F.data == "choose_pain_points")
+async def pain_points_choose(callback: CallbackQuery, state: FSMContext):
+    buttons = {opt["label"]: opt["callback_data"] for opt in PAIN_POINTS_PAGES}
+    keyboard = create_inline_keyboard(buttons, 1)
+    await callback.message.edit_text("2. Выберите один из вариантов:", reply_markup=keyboard)
     await callback.answer()
 
 @router.callback_query(SurveyStates.pain_points_page, F.data == "other")
@@ -432,10 +322,9 @@ async def pain_points_other_input(message: Message, state: FSMContext):
     user_responses[user_id]["pain_points"].append("other")
     user_responses[user_id]["pain_points_details"] = message.text
 
-    # Создаем новый вопрос для "other"
-    question_text = f"Другое направление 'болей': {message.text}"
+    question_text = "2. Основные направления «болей» с которыми столкнулось ваше предприятие? (Другое)"
     try:
-        question_data = {"text": question_text, "number": 4, "answer_type": "string"}  # number=4 для вопроса 4
+        question_data = {"text": question_text, "number": 2, "answer_type": "string"}
         question = await create_question(question_data)
         user_responses[user_id]["question_id"] = question.get("id")
     except Exception as e:
@@ -443,7 +332,6 @@ async def pain_points_other_input(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    # Сохранение ответа на вопрос 4 (other)
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
         "question_id": user_responses[user_id]["question_id"],
@@ -457,21 +345,11 @@ async def pain_points_other_input(message: Message, state: FSMContext):
         return
     keyboard = create_inline_keyboard(MAIN_BARRIER_BUTTONS, 2)
     await message.reply(
-        "5. Что является главным барьером для перехода на отечественное ПО?",
+        "4. Что является главным барьером для перехода на отечественное ПО?",
         reply_markup=keyboard
     )
     await state.set_state(SurveyStates.main_barrier)
 
-@router.callback_query(SurveyStates.pain_points_page, F.data.startswith("choose_"))
-async def pain_points_choose(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    current_page = data.get("current_page", 0)
-    options = get_page_options(current_page)
-    buttons = {opt["label"]: opt["callback_data"] for opt in options}
-    keyboard = create_inline_keyboard(buttons, 1)
-    await callback.message.edit_text("Выберите один из вариантов:", reply_markup=keyboard)
-    await callback.answer()
-    await state.set_state(SurveyStates.pain_points_selection)
 
 @router.callback_query(SurveyStates.pain_points_selection)
 async def pain_points_selection(callback: CallbackQuery, state: FSMContext):
@@ -672,7 +550,7 @@ async def main_barrier(callback: CallbackQuery, state: FSMContext):
         await state.clear()
         return
     await callback.message.edit_text(
-        "6. Насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО? (аналог «один в один»)",
+        "6. Насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО?",
         reply_markup=create_inline_keyboard(DIRECT_REPLACEMENT_BUTTONS, 2)
     )
     await callback.answer()
@@ -683,7 +561,7 @@ async def direct_replacement(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["direct_replacement"] = callback.data
     # Создаем новый вопрос для замещения
-    question_text = "6. Насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО? (аналог «один в один»)"
+    question_text = "6. Насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО?"
     try:
         question_data = {"text": question_text, "number": 6, "answer_type": "string"}  # number=6 для вопроса 6
         question = await create_question(question_data)
@@ -721,7 +599,7 @@ async def direct_replacement_details(message: Message, state: FSMContext):
     user_id = message.from_user.id
     user_responses[user_id]["direct_replacement_details"] = message.text
     # Создаем новый вопрос для деталей замещения
-    question_text = f"Детали замещения: {message.text}"
+    question_text = f"6. Насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО?"        ######## {message.text}"
     try:
         question_data = {"text": question_text, "number": 6, "answer_type": "string"}  # number=6 для вопроса 6 (other)
         question = await create_question(question_data)
@@ -844,7 +722,7 @@ async def software_classes_details(message: Message, state: FSMContext):
     user_id = message.from_user.id
     user_responses[user_id]["software_classes_details"] = message.text
     # Создаем новый вопрос для деталей классов ПО
-    question_text = f"Детали классов ПО: {message.text}"
+    question_text = f"8. Какие классы ПО вы бы хотели протестировать?"  ############## {message.text}
     try:
         question_data = {"text": question_text, "number": 8, "answer_type": "string"}  # number=8 для вопроса 8 (other)
         question = await create_question(question_data)
@@ -904,7 +782,7 @@ async def event_interest(callback: CallbackQuery, state: FSMContext):
         await state.clear()
         return
     await callback.message.edit_text(
-        "10. Хотели ли бы вы, чтобы вам помогли подобрать российское решение под ваш профиль?",
+        "10. Хотели бы вы, чтобы вам помогли подобрать российское решение под ваш профиль?",
         reply_markup=create_inline_keyboard(YES_NO_BUTTONS, 2)
     )
     await callback.answer()
@@ -915,7 +793,7 @@ async def solution_help(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["solution_help"] = callback.data
     # Создаем новый вопрос для помощи с решением
-    question_text = "10. Хотели ли бы вы, чтобы вам помогли подобрать российское решение под ваш профиль?"
+    question_text = "10. Хотели бы вы, чтобы вам помогли подобрать российское решение под ваш профиль?"
     try:
         question_data = {"text": question_text, "number": 10, "answer_type": "string"}  # number=10 для вопроса 10
         question = await create_question(question_data)
