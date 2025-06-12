@@ -88,3 +88,34 @@ async def get_enterprises():
             request=e.request,
             response=e.response
         )
+    
+async def update_enterprise(enterprise_id: int, data: dict):
+    """
+    Обновляет существующее предприятие.
+
+    Args:
+        enterprise_id (int): Идентификатор предприятия.
+        data (EnterpriseUpdate): Данные для обновления предприятия.
+
+    Returns:
+        dict: Объект обновлённого предприятия при успешном запросе.
+
+    Raises:
+        httpx.HTTPStatusError: Если сервер вернул ошибку HTTP.
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.put(f'{URL}{ENTERPRISES}', params={'enterprise_id': enterprise_id}, json=data)
+            if response.status_code != 200:
+                logging.error(f"Ошибка при обновлении предприятия. Код: {response.status_code}, Тело ответа: {response.text}")
+            response.raise_for_status()
+            if response.status_code == 200:
+                enterprise = response.json()
+                return enterprise
+    except httpx.HTTPStatusError as e:
+        logging.exception(f"Произошла ошибка при обновлении предприятия: {str(e)}")
+        raise httpx.HTTPStatusError(
+            message="Произошла ошибка при обновлении предприятия",
+            request=e.request,
+            response=e.response
+        )

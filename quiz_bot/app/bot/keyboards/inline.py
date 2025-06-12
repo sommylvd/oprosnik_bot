@@ -22,47 +22,43 @@ PAIN_POINTS_BUTTONS = {
 FUNCTIONALITY_DETAILS_BUTTONS = {}  # No buttons, user inputs text
 
 INTEGRATION_DETAILS_BUTTONS = {
-    "очень сложно": "very_hard",
-    "сложно": "hard",
-    "средне": "medium",
-    "легко": "easy",
-    "не знаю": "dont_know",
-    "другое": "other_difficulty"
+    "Очень сложно": "very_hard",
+    "Сложно": "hard",
+    "Средне": "medium",
+    "Легко": "easy",
+    "Другое": "other_difficulty"
 }
 
 PERSONNEL_DETAILS_BUTTONS = {
-    "очень дефицит": "very_shortage",
-    "дефицит": "shortage",
-    "средне": "medium",
-    "достаточно": "sufficient",
-    "не знаю": "dont_know",
-    "другое": "other_personnel"
+    "Очень дефицит": "very_shortage",
+    "Дефицит": "shortage",
+    "Средне": "medium",
+    "Достаточно": "sufficient",
+    "Другое": "other_personnel"
 }
 
 COMPATIBILITY_DETAILS_BUTTONS = {
-    "критично": "critical",
-    "серьезно": "serious",
-    "умеренно": "moderate",
-    "не актуально": "not_relevant",
-    "не знаю": "dont_know"
+    "Критично": "critical",
+    "Серьезно": "serious",
+    "Умеренно": "moderate",
+    "Не актуально": "not_relevant",
 }
 
 COSTS_DETAILS_BUTTONS = {
-    "стоимость отечественного ПО": "software_cost",
-    "миграция данных": "data_migration",
-    "обучение персонала": "training",
-    "доработка ПО под нужды предприятия": "customization",
-    "аппаратное обновление": "hardware_upgrade",
-    "простои производства": "downtime",
-    "другое": "other_costs"
+    "Стоимость отечественного ПО": "software_cost",
+    "Миграция данных": "data_migration",
+    "Обучение персонала": "training",
+    "Доработка ПО под нужды предприятия": "customization",
+    "Аппаратное обновление": "hardware_upgrade",
+    "Простои производства": "downtime",
+    "Другое": "other_costs"
 }
 
 SUPPORT_DETAILS_BUTTONS = {
-    "очень беспокоит": "very_concerned",
-    "беспокоит": "concerned",
-    "удовлетворительно": "satisfactory",
-    "не беспокоит": "not_concerned",
-    "не знаю": "dont_know"
+    "Очень беспокоит": "very_concerned",
+    "Беспокоит": "concerned",
+    "Удовлетворительно": "satisfactory",
+    "Не беспокоит": "not_concerned",
 }
 
 MAIN_BARRIER_BUTTONS = {
