@@ -26,3 +26,4 @@ class SurveyStates(StatesGroup):
     software_classes_details = State()
     event_interest = State()
     solution_help = State()
+    data_review = State() 

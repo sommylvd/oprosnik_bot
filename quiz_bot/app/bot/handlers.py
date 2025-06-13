@@ -1,3 +1,5 @@
+import logging
+from typing import Union
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -23,7 +25,7 @@ from cryptography.fernet import Fernet
 import re
 from datetime import datetime
 from app.bot.con_funcs.enterprise import create_enterprise, get_enterprises, update_enterprise
-from app.bot.con_funcs.respondent import create_respondent
+from app.bot.con_funcs.respondent import create_respondent, update_respondent
 from app.bot.con_funcs.survey import create_survey
 from app.bot.con_funcs.survey_answer import create_survey_answer
 from app.bot.con_funcs.software_category import create_software_category, get_software_categories
@@ -181,6 +183,33 @@ async def company_inn(message: Message, state: FSMContext):
         await message.delete()
         return
     
+    # Проверяем, находимся ли мы в режиме изменения данных
+    is_data_review = user_responses[user_id]["state_history"][-1] == SurveyStates.data_review
+    
+    if is_data_review:
+        # Обновляем данные компании через API
+        enterprise_data = {
+            'inn': inn,
+            'name': user_responses[user_id]["company_name"],
+            'short_name': "none"
+        }
+        try:
+            await update_enterprise(user_responses[user_id]["enterprise_id"], enterprise_data)
+            user_responses[user_id]["company_inn"] = inn
+        except Exception as e:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=user_responses[user_id]["last_message_id"],
+                text=f"Ошибка при обновлении ИНН: {str(e)}"
+            )
+            await message.delete()
+            return
+        
+        # Возвращаемся к просмотру данных
+        await show_data_review(message, state, user_id)
+        await message.delete()
+        return
+    
     previous_inn = user_responses.get(user_id, {}).get("company_inn")
     
     if inn == previous_inn:
@@ -266,6 +295,33 @@ async def full_name(message: Message, state: FSMContext):
             await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         return
+    
+    is_data_review = user_responses[user_id]["state_history"][-1] == SurveyStates.data_review
+    
+    if is_data_review:
+        # Обновляем данные респондента через API
+        respondent_data = {
+            "full_name": full_name,
+            "position": user_responses[user_id]["position"],
+            "phone": decrypt_data(user_responses[user_id]["phone_number"]),
+            "email": decrypt_data(user_responses[user_id]["email"]),
+        }
+        try:
+            await update_respondent(user_responses[user_id]["respondent_id"], respondent_data, user_responses[user_id]["enterprise_id"])
+            user_responses[user_id]["full_name"] = full_name
+        except Exception as e:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=user_responses[user_id]["last_message_id"],
+                text=f"Ошибка при обновлении ФИО: {str(e)}"
+            )
+            await message.delete()
+            return
+        
+        # Возвращаемся к просмотру данных
+        await show_data_review(message, state, user_id)
+        await message.delete()
+        return
 
     user_responses[user_id]["full_name"] = full_name
     try:
@@ -302,6 +358,43 @@ async def position(message: Message, state: FSMContext):
         await message.delete()
         return
 
+    is_data_review = user_responses[user_id]["state_history"][-1] == SurveyStates.data_review
+    
+    if is_data_review:
+        # Проверяем наличие необходимых данных
+        required_keys = ["respondent_id", "enterprise_id", "phone_number", "email", "full_name"]
+        missing_keys = [key for key in required_keys if key not in user_responses[user_id]]
+        
+        if missing_keys:
+            error_msg = f"Missing data: {', '.join(missing_keys)}"
+            logging.error(error_msg)
+            await message.answer(f"Ошибка: отсутствуют необходимые данные ({error_msg})")
+            return
+        # Обновляем данные респондента через API
+        respondent_data = {
+            "full_name": user_responses[user_id]["full_name"],
+            "position": position,
+            "phone": decrypt_data(user_responses[user_id]["phone_number"]),
+            "email": decrypt_data(user_responses[user_id]["email"]),
+        }
+        try:
+            await update_respondent(user_responses[user_id]["respondent_id"], respondent_data, user_responses[user_id]["enterprise_id"])
+            user_responses[user_id]["position"] = position
+        except Exception as e:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=user_responses[user_id]["last_message_id"],
+                text=f"Ошибка при обновлении должности: {str(e)}"
+            )
+            await message.delete()
+            return
+        
+        # Возвращаемся к просмотру данных
+        await show_data_review(message, state, user_id)
+        await message.delete()
+        return
+
+
     user_responses[user_id]["position"] = position
     try:
         await message.bot.edit_message_text(
@@ -334,6 +427,33 @@ async def phone_number(message: Message, state: FSMContext):
             )
         except Exception as e:
             await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+        await message.delete()
+        return
+    
+    is_data_review = user_responses[user_id]["state_history"][-1] == SurveyStates.data_review
+    
+    if is_data_review:
+        # Обновляем данные респондента через API
+        respondent_data = {
+            "full_name": user_responses[user_id]["full_name"],
+            "position": user_responses[user_id]["position"],
+            "phone": phone,
+            "email": decrypt_data(user_responses[user_id]["email"]),
+        }
+        try:
+            await update_respondent(user_responses[user_id]["respondent_id"], respondent_data, user_responses[user_id]["enterprise_id"])
+            user_responses[user_id]["phone_number"] = encrypt_data(phone)
+        except Exception as e:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=user_responses[user_id]["last_message_id"],
+                text=f"Ошибка при обновлении телефона: {str(e)}"
+            )
+            await message.delete()
+            return
+        
+        # Возвращаемся к просмотру данных
+        await show_data_review(message, state, user_id)
         await message.delete()
         return
 
@@ -373,6 +493,33 @@ async def email(message: Message, state: FSMContext):
         await message.delete()
         return
     
+    is_data_review = user_responses[user_id]["state_history"][-1] == SurveyStates.data_review
+    
+    if is_data_review:
+        # Обновляем данные респондента через API
+        respondent_data = {
+            "full_name": user_responses[user_id]["full_name"],
+            "position": user_responses[user_id]["position"],
+            "phone": decrypt_data(user_responses[user_id]["phone_number"]),
+            "email": email_input,
+        }
+        try:
+            await update_respondent(user_responses[user_id]["respondent_id"], respondent_data, user_responses[user_id]["enterprise_id"])
+            user_responses[user_id]["email"] = encrypt_data(email_input)
+        except Exception as e:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=user_responses[user_id]["last_message_id"],
+                text=f"Ошибка при обновлении email: {str(e)}"
+            )
+            await message.delete()
+            return
+        
+        # Возвращаемся к просмотру данных
+        await show_data_review(message, state, user_id)
+        await message.delete()
+        return
+
     user_responses[user_id]["email"] = encrypt_data(email_input)
     phone = decrypt_data(user_responses[user_id]["phone_number"]) if user_responses[user_id]["phone_number"] else None
     email = decrypt_data(user_responses[user_id]["email"]) if user_responses[user_id]["email"] else None
@@ -1152,8 +1299,111 @@ async def solution_help(callback: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
-    await callback.message.edit_text("Спасибо, что прошли наш опрос!", reply_markup=None)
+    # Переход к проверке данных вместо завершения опроса
+    await show_data_review(callback, state, user_id)
+    await callback.answer()
+
+async def show_data_review(event: Union[Message, CallbackQuery], state: FSMContext, user_id: int):
+    """Универсальная функция для отображения сводки данных"""
+    data = user_responses[user_id]
+    
+    # Формируем текст сообщения
+    text = (
+        "Проверьте данные, которые вы указали:\n\n"
+        f"<b>Название компании:</b> {data['company_name']}\n"
+        f"<b>ИНН:</b> {data.get('company_inn', '')}\n"
+        f"<b>ФИО:</b> {data['full_name']}\n"
+        f"<b>Должность:</b> {data['position']}\n"
+        f"<b>Телефон:</b> {decrypt_data(data['phone_number'])}\n"
+        f"<b>Почта:</b> {decrypt_data(data['email'])}\n"
+    )
+    
+    # Создаем кнопки
+    buttons = {
+        "Поменять ИНН": "change_inn",
+        "Поменять ФИО": "change_full_name",
+        "Поменять должность": "change_position",
+        "Поменять телефон": "change_phone",
+        "Поменять почту": "change_email",
+        "Подтвердить": "confirm_data"
+    }
+    
+    keyboard = create_inline_keyboard(buttons, 2)
+    
+    try:
+        # Определяем тип события и соответствующим образом редактируем сообщение
+        if isinstance(event, Message):
+            await event.bot.edit_message_text(
+                chat_id=event.chat.id,
+                message_id=user_responses[user_id]["last_message_id"],
+                text=text,
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
+        elif isinstance(event, CallbackQuery):
+            await event.message.edit_text(
+                text=text,
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
+            # Обновляем ID последнего сообщения
+            user_responses[user_id]["last_message_id"] = event.message.message_id
+    
+    except Exception as e:
+        # Обработка ошибок в зависимости от типа события
+        if isinstance(event, Message):
+            await event.answer(f"Ошибка при отображении данных: {str(e)}")
+        elif isinstance(event, CallbackQuery):
+            await event.message.answer(f"Ошибка при отображении данных: {str(e)}")
+    
+    # Устанавливаем состояние просмотра данных
+    await state.set_state(SurveyStates.data_review)
+    user_responses[user_id]["state_history"].append(SurveyStates.data_review)
+
+@router.callback_query(SurveyStates.data_review, F.data.startswith("change_"))
+async def change_data(callback: CallbackQuery, state: FSMContext):
+    """Обработка кнопок изменения данных"""
+    user_id = callback.from_user.id
+    action = callback.data
+    
+    if action == "change_inn":
+        await state.set_state(SurveyStates.company_inn)
+        await callback.message.edit_text(
+            "Введите ИНН вашей компании:",
+            reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="data_review")
+        )
+    elif action == "change_full_name":
+        await state.set_state(SurveyStates.full_name)
+        await callback.message.edit_text(
+            "Введите ваше ФИО (полностью):",
+            reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="data_review")
+        )
+    elif action == "change_position":
+        await state.set_state(SurveyStates.position)
+        await callback.message.edit_text(
+            "Введите вашу должность:",
+            reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="data_review")
+        )
+    elif action == "change_phone":
+        await state.set_state(SurveyStates.phone_number)
+        await callback.message.edit_text(
+            "Введите телефон для связи:",
+            reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="data_review")
+        )
+    elif action == "change_email":
+        await state.set_state(SurveyStates.email)
+        await callback.message.edit_text(
+            "Введите email вашей компании для связи:",
+            reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="data_review")
+        )
+    
     user_responses[user_id]["last_message_id"] = callback.message.message_id
+    await callback.answer()
+
+@router.callback_query(SurveyStates.data_review, F.data == "confirm_data")
+async def confirm_data(callback: CallbackQuery, state: FSMContext):
+    """Подтверждение данных и завершение опроса"""
+    await callback.message.edit_text("Спасибо, что прошли наш опрос!", reply_markup=None)
     await callback.answer()
     await state.clear()
 
@@ -1309,6 +1559,8 @@ async def go_back(callback: CallbackQuery, state: FSMContext):
             reply_markup=create_inline_keyboard(YES_NO_BUTTONS, 2, include_back=True, back_state="event_interest"),
             parse_mode='HTML'
         )
+    elif previous_state == SurveyStates.data_review:
+        await show_data_review(callback, state, user_id)
 
     else:
         await callback.message.edit_text("Неизвестное состояние, возврат невозможен.")
