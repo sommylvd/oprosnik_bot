@@ -97,6 +97,7 @@ PAIN_POINTS_PAGES = [
     }
 ]
 
+
 # Handlers before email remain unchanged
 @router.message(Command("start"))
 async def start(message: Message, state: FSMContext):
@@ -143,7 +144,7 @@ async def company_name(message: Message, state: FSMContext):
                 reply_markup=create_inline_keyboard({}, 2, include_back=False, back_state="consent")
             )
         except Exception as e:
-            await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+            print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         return
 
@@ -156,7 +157,7 @@ async def company_name(message: Message, state: FSMContext):
             reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="company_name")
         )
     except Exception as e:
-        await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+        print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         await state.clear()
         return
@@ -179,7 +180,7 @@ async def company_inn(message: Message, state: FSMContext):
                 reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="company_name")
             )
         except Exception as e:
-            await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+            print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         return
     
@@ -221,7 +222,7 @@ async def company_inn(message: Message, state: FSMContext):
                 reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="company_inn")
             )
         except Exception as e:
-            await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+            print(f"Ошибка при редактировании сообщения: {str(e)}")
             await message.delete()
             await state.clear()
             return
@@ -292,7 +293,7 @@ async def full_name(message: Message, state: FSMContext):
                 reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="company_inn")
             )
         except Exception as e:
-            await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+            print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         return
     
@@ -332,7 +333,7 @@ async def full_name(message: Message, state: FSMContext):
             reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="full_name")
         )
     except Exception as e:
-        await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+        print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         await state.clear()
         return
@@ -354,7 +355,7 @@ async def position(message: Message, state: FSMContext):
                 reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="full_name")
             )
         except Exception as e:
-            await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+            print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         return
 
@@ -368,7 +369,7 @@ async def position(message: Message, state: FSMContext):
         if missing_keys:
             error_msg = f"Missing data: {', '.join(missing_keys)}"
             logging.error(error_msg)
-            await message.answer(f"Ошибка: отсутствуют необходимые данные ({error_msg})")
+            print(f"Ошибка: отсутствуют необходимые данные ({error_msg})")
             return
         # Обновляем данные респондента через API
         respondent_data = {
@@ -404,7 +405,7 @@ async def position(message: Message, state: FSMContext):
             reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="position")
         )
     except Exception as e:
-        await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+        print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         await state.clear()
         return
@@ -426,7 +427,7 @@ async def phone_number(message: Message, state: FSMContext):
                 reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="position")
             )
         except Exception as e:
-            await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+            print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         return
     
@@ -466,7 +467,7 @@ async def phone_number(message: Message, state: FSMContext):
             reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="phone_number")
         )
     except Exception as e:
-        await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+        print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         await state.clear()
         return
@@ -489,7 +490,7 @@ async def email(message: Message, state: FSMContext):
                 reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="phone_number")
             )
         except Exception as e:
-            await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+            print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         return
     
@@ -591,7 +592,7 @@ async def email(message: Message, state: FSMContext):
             parse_mode='HTML'
         )
     except Exception as e:
-        await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+        print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         await state.clear()
         return
@@ -614,7 +615,7 @@ async def implementation_stage(callback: CallbackQuery, state: FSMContext):
     try:
         await create_survey_answer(survey_answer_data)
     except Exception as e:
-        await callback.message.edit_text(f"Ошибка при сохранении ответа: {str(e)}")
+        print(f"Ошибка при сохранении ответа: {str(e)}")
         await state.clear()
         return
 
@@ -637,15 +638,16 @@ async def pain_points_choose(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     buttons = {opt["label"]: opt["callback_data"] for opt in PAIN_POINTS_PAGES}
     keyboard = create_inline_keyboard(buttons, 1, include_back=True, back_state="pain_points_selection")
-    await callback.message.edit_text("<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\nВыберите один из вариантов:", reply_markup=keyboard, parse_mode='HTML')
+    await callback.message.edit_text("<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nВыберите один из вариантов:", reply_markup=keyboard, parse_mode='HTML')
     user_responses[user_id]["last_message_id"] = callback.message.message_id
     await callback.answer()
 
 @router.callback_query(SurveyStates.pain_points_selection, F.data == "other")
 async def pain_points_other(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
+    user_responses[user_id]["current_pain_point"] = None  # явное указание, что это верхнеуровневое "другое"
     await callback.message.edit_text(
-        "<b>2. Введите основные направления «болей» с которыми столкнулось ваше предприятие</b>",
+        "<b>Пожалуйста, укажите свой вариант по направлениям «болей», с которыми столкнулось ваше предприятие:</b>",
         reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="pain_points_selection"),
         parse_mode='HTML'
     )
@@ -654,12 +656,78 @@ async def pain_points_other(callback: CallbackQuery, state: FSMContext):
     await state.set_state(SurveyStates.pain_points_other)
     user_responses[user_id]["state_history"].append(SurveyStates.pain_points_other)
 
+
 @router.message(SurveyStates.pain_points_other)
 async def pain_points_other_input(message: Message, state: FSMContext):
     user_id = message.from_user.id
+    input_text = message.text.strip()
+    context = user_responses[user_id].get("current_pain_point")
+
     user_responses[user_id]["pain_points"] = user_responses[user_id].get("pain_points", [])
+
+    if context:
+        if context not in user_responses[user_id]["pain_points"]:
+            user_responses[user_id]["pain_points"].append(context)
+        user_responses[user_id]["pain_points_details"] = input_text
+
+        question_text = f"2. Детали для {context} (другое):"
+        try:
+            question_data = {"text": question_text, "number": 2, "answer_type": "string"}
+            question = await create_question(question_data)
+            user_responses[user_id]["question_id"] = question.get("id")
+        except Exception as e:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=user_responses[user_id]["last_message_id"],
+                text=f"Ошибка при работе с вопросами: {str(e)}"
+            )
+            await message.delete()
+            await state.clear()
+            return
+
+        survey_answer_data = {
+            "survey_id": user_responses[user_id]["survey_id"],
+            "question_id": user_responses[user_id]["question_id"],
+            "answer": {"value": f"other ({context}): {input_text}"}
+        }
+        try:
+            await create_survey_answer(survey_answer_data)
+        except Exception as e:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=user_responses[user_id]["last_message_id"],
+                text=f"Ошибка при сохранении ответа: {str(e)}"
+            )
+            await message.delete()
+            await state.clear()
+            return
+
+        # Переход к третьему вопросу вместо возврата к выбору болей
+        options_text = "\n".join([f"- {key}" for key in MAIN_BARRIER_BUTTONS.keys()])
+        keyboard = create_inline_keyboard(MAIN_BARRIER_BUTTONS, 1, include_back=True, back_state="pain_points_selection")
+        try:
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=user_responses[user_id]["last_message_id"],
+                text=f"<b>3. Что является главным барьером для перехода на отечественное ПО?</b>\n\n{options_text}",
+                reply_markup=keyboard,
+                parse_mode='HTML'
+            )
+        except Exception as e:
+            print(f"Ошибка при редактировании сообщения: {str(e)}")
+            await message.delete()
+            await state.clear()
+            return
+
+        user_responses[user_id]["last_message_id"] = user_responses[user_id]["last_message_id"]
+        await message.delete()
+        await state.set_state(SurveyStates.main_barrier)
+        user_responses[user_id]["state_history"].append(SurveyStates.main_barrier)
+        return
+
+    # Если "Другое" выбрано на главном экране болей
     user_responses[user_id]["pain_points"].append("other")
-    user_responses[user_id]["pain_points_details"] = message.text
+    user_responses[user_id]["pain_points_details"] = input_text
 
     question_text = "2. Основные направления «болей» с которыми столкнулось ваше предприятие? (Другое)"
     try:
@@ -667,8 +735,11 @@ async def pain_points_other_input(message: Message, state: FSMContext):
         question = await create_question(question_data)
         user_responses[user_id]["question_id"] = question.get("id")
     except Exception as e:
-        sent_message = await message.answer(f"Ошибка при работе с вопросами: {str(e)}")
-        user_responses[user_id]["last_message_id"] = sent_message.message_id
+        await message.bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=user_responses[user_id]["last_message_id"],
+            text=f"Ошибка при работе с вопросами: {str(e)}"
+        )
         await message.delete()
         await state.clear()
         return
@@ -676,27 +747,116 @@ async def pain_points_other_input(message: Message, state: FSMContext):
     survey_answer_data = {
         "survey_id": user_responses[user_id]["survey_id"],
         "question_id": user_responses[user_id]["question_id"],
-        "answer": {"value": f"other: {message.text}"}
+        "answer": {"value": f"other: {input_text}"}
     }
     try:
         await create_survey_answer(survey_answer_data)
     except Exception as e:
-        sent_message = await message.answer(f"Ошибка при сохранении ответа: {str(e)}")
-        user_responses[user_id]["last_message_id"] = sent_message.message_id
+        await message.bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=user_responses[user_id]["last_message_id"],
+            text=f"Ошибка при сохранении ответа: {str(e)}"
+        )
         await message.delete()
         await state.clear()
         return
 
+    # Переход к третьему вопросу
     options_text = "\n".join([f"- {key}" for key in MAIN_BARRIER_BUTTONS.keys()])
     keyboard = create_inline_keyboard(MAIN_BARRIER_BUTTONS, 1, include_back=True, back_state="pain_points_selection")
-    sent_message = await message.answer(
-        f"<b>3. Что является главным барьером для перехода на отечественное ПО?</b>\n\n{options_text}",
-        reply_markup=keyboard, parse_mode='HTML'
-    )
-    user_responses[user_id]["last_message_id"] = sent_message.message_id
+    try:
+        await message.bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=user_responses[user_id]["last_message_id"],
+            text=f"<b>3. Что является главным барьером для перехода на отечественное ПО?</b>\n\n{options_text}",
+            reply_markup=keyboard,
+            parse_mode='HTML'
+        )
+    except Exception as e:
+        print(f"Ошибка при редактировании сообщения: {str(e)}")
+        await message.delete()
+        await state.clear()
+        return
+
+    user_responses[user_id]["last_message_id"] = user_responses[user_id]["last_message_id"]
     await message.delete()
     await state.set_state(SurveyStates.main_barrier)
     user_responses[user_id]["state_history"].append(SurveyStates.main_barrier)
+
+@router.callback_query(SurveyStates.pain_points_integration_details, F.data == "other_integration")
+async def pain_points_integration_other(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["current_pain_point"] = "integration"
+    await callback.message.edit_text(
+        "<b>Укажите свой вариант по уровню сложности интеграции:</b>",
+        reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="pain_points_selection"),
+        parse_mode='HTML'
+    )
+    user_responses[user_id]["last_message_id"] = callback.message.message_id
+    await callback.answer()
+    await state.set_state(SurveyStates.pain_points_other)
+    user_responses[user_id]["state_history"].append(SurveyStates.pain_points_other)
+
+
+@router.callback_query(SurveyStates.pain_points_personnel_details, F.data == "other_personnel")
+async def pain_points_personnel_other(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["current_pain_point"] = "personnel"
+    await callback.message.edit_text(
+        "<b>Укажите свой вариант по доступности специалистов:</b>",
+        reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="pain_points_selection"),
+        parse_mode='HTML'
+    )
+    user_responses[user_id]["last_message_id"] = callback.message.message_id
+    await callback.answer()
+    await state.set_state(SurveyStates.pain_points_other)
+    user_responses[user_id]["state_history"].append(SurveyStates.pain_points_other)
+
+
+@router.callback_query(SurveyStates.pain_points_compatibility_details, F.data == "other_compatibility")
+async def pain_points_compatibility_other(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["current_pain_point"] = "compatibility"
+    await callback.message.edit_text(
+        "<b>Укажите свой вариант по совместимости:</b>",
+        reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="pain_points_selection"),
+        parse_mode='HTML'
+    )
+    user_responses[user_id]["last_message_id"] = callback.message.message_id
+    await callback.answer()
+    await state.set_state(SurveyStates.pain_points_other)
+    user_responses[user_id]["state_history"].append(SurveyStates.pain_points_other)
+
+
+@router.callback_query(SurveyStates.pain_points_costs_details, F.data == "other_costs")
+async def pain_points_costs_other(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["current_pain_point"] = "costs"
+    await callback.message.edit_text(
+        "<b>Укажите свой вариант по затратам:</b>",
+        reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="pain_points_selection"),
+        parse_mode='HTML'
+    )
+    user_responses[user_id]["last_message_id"] = callback.message.message_id
+    await callback.answer()
+    await state.set_state(SurveyStates.pain_points_other)
+    user_responses[user_id]["state_history"].append(SurveyStates.pain_points_other)
+
+
+@router.callback_query(SurveyStates.pain_points_support_details, F.data == "other_support")
+async def pain_points_support_other(callback: CallbackQuery, state: FSMContext):
+    user_id = callback.from_user.id
+    user_responses[user_id]["current_pain_point"] = "support"
+    await callback.message.edit_text(
+        "<b>Укажите свой вариант по технической поддержке:</b>",
+        reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="pain_points_selection"),
+        parse_mode='HTML'
+    )
+    user_responses[user_id]["last_message_id"] = callback.message.message_id
+    await callback.answer()
+    await state.set_state(SurveyStates.pain_points_other)
+    user_responses[user_id]["state_history"].append(SurveyStates.pain_points_other)
+
 
 @router.callback_query(SurveyStates.pain_points_selection, ~F.data.startswith("back_"))
 async def pain_points_selection(callback: CallbackQuery, state: FSMContext):
@@ -713,7 +873,7 @@ async def pain_points_selection(callback: CallbackQuery, state: FSMContext):
             question = await create_question(question_data)
             user_responses[user_id]["question_id"] = question.get("id")
         except Exception as e:
-            await callback.message.edit_text(f"Ошибка при работе с вопросами: {str(e)}")
+            print(f"Ошибка при работе с вопросами: {str(e)}")
             await state.clear()
             return
 
@@ -778,7 +938,7 @@ async def pain_points_functionality_details(message: Message, state: FSMContext)
             parse_mode='HTML'
         )
     except Exception as e:
-        await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+        print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         await state.clear()
         return
@@ -814,6 +974,8 @@ async def pain_points_integration_details(callback: CallbackQuery, state: FSMCon
     await state.set_state(SurveyStates.main_barrier)
     user_responses[user_id]["state_history"].append(SurveyStates.main_barrier)
 
+
+
 @router.callback_query(SurveyStates.pain_points_personnel_details)
 async def pain_points_personnel_details(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
@@ -840,6 +1002,7 @@ async def pain_points_personnel_details(callback: CallbackQuery, state: FSMConte
     await callback.answer()
     await state.set_state(SurveyStates.main_barrier)
     user_responses[user_id]["state_history"].append(SurveyStates.main_barrier)
+
 
 @router.callback_query(SurveyStates.pain_points_compatibility_details)
 async def pain_points_compatibility_details(callback: CallbackQuery, state: FSMContext):
@@ -868,6 +1031,8 @@ async def pain_points_compatibility_details(callback: CallbackQuery, state: FSMC
     await state.set_state(SurveyStates.main_barrier)
     user_responses[user_id]["state_history"].append(SurveyStates.main_barrier)
 
+
+
 @router.callback_query(SurveyStates.pain_points_costs_details)
 async def pain_points_costs_details(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
@@ -895,6 +1060,7 @@ async def pain_points_costs_details(callback: CallbackQuery, state: FSMContext):
     await state.set_state(SurveyStates.main_barrier)
     user_responses[user_id]["state_history"].append(SurveyStates.main_barrier)
 
+
 @router.callback_query(SurveyStates.pain_points_support_details)
 async def pain_points_support_details(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
@@ -921,6 +1087,7 @@ async def pain_points_support_details(callback: CallbackQuery, state: FSMContext
     await callback.answer()
     await state.set_state(SurveyStates.main_barrier)
     user_responses[user_id]["state_history"].append(SurveyStates.main_barrier)
+
 
 @router.callback_query(SurveyStates.main_barrier, F.data.in_(MAIN_BARRIER_BUTTONS.values()), ~F.data.startswith("back_"))
 async def main_barrier(callback: CallbackQuery, state: FSMContext):
@@ -986,7 +1153,7 @@ async def direct_replacement(callback: CallbackQuery, state: FSMContext):
 
     if callback.data == "other_repl":
         await callback.message.edit_text(
-            "<b>4. Введите насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО</b>",
+            "<b>Насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО?</b>",
             reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="direct_replacement"),
             parse_mode='HTML'
         )
@@ -1050,7 +1217,7 @@ async def direct_replacement_details(message: Message, state: FSMContext):
             parse_mode='HTML'
         )
     except Exception as e:
-        await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+        print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         await state.clear()
         return
@@ -1159,7 +1326,7 @@ async def software_classes(callback: CallbackQuery, state: FSMContext):
             return
     else:
         await callback.message.edit_text(
-            "<b>Введите какие классы ПО вы бы хотели протестировать</b>",
+            "<b>Какие классы ПО вы бы хотели протестировать?</b>",
             reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="software_classes"),
             parse_mode='HTML'
         )
@@ -1228,7 +1395,7 @@ async def software_classes_details(message: Message, state: FSMContext):
             parse_mode='HTML'
         )
     except Exception as e:
-        await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
+        print(f"Ошибка при редактировании сообщения: {str(e)}")
         await message.delete()
         await state.clear()
         return
@@ -1283,7 +1450,7 @@ async def solution_help(callback: CallbackQuery, state: FSMContext):
         question = await create_question(question_data)
         user_responses[user_id]["question_id"] = question.get("id")
     except Exception as e:
-        await callback.message.edit_text(f"Ошибка при работе с вопросами: {str(e)}")
+        print(f"Ошибка при работе с вопросами: {str(e)}")
         await state.clear()
         return
 
@@ -1295,7 +1462,7 @@ async def solution_help(callback: CallbackQuery, state: FSMContext):
     try:
         await create_survey_answer(survey_answer_data)
     except Exception as e:
-        await callback.message.edit_text(f"Ошибка при сохранении ответа: {str(e)}")
+        print(f"Ошибка при сохранении ответа: {str(e)}")
         await state.clear()
         return
 

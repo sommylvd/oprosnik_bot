@@ -26,7 +26,7 @@ INTEGRATION_DETAILS_BUTTONS = {
     "Сложно": "hard",
     "Средне": "medium",
     "Легко": "easy",
-    "Другое": "other_difficulty"
+    "Другое": "other_integration"
 }
 
 PERSONNEL_DETAILS_BUTTONS = {
