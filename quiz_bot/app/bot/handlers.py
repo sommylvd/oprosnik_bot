@@ -114,7 +114,7 @@ async def consent_agree(callback: CallbackQuery, state: FSMContext):
     user_responses[user_id]["consent"] = True
     await callback.message.edit_text(
         "Введите полное название вашей компании или организации:",
-        reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="consent")
+        reply_markup=create_inline_keyboard({}, 2, include_back=False, back_state="consent")
     )
     user_responses[user_id]["last_message_id"] = callback.message.message_id
     await state.set_state(SurveyStates.company_name)
@@ -140,7 +140,7 @@ async def company_name(message: Message, state: FSMContext):
                 chat_id=message.chat.id,
                 message_id=user_responses[user_id]["last_message_id"],
                 text="Пожалуйста, введите непустое название компании.",
-                reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="consent")
+                reply_markup=create_inline_keyboard({}, 2, include_back=False, back_state="consent")
             )
         except Exception as e:
             await message.answer(f"Ошибка при редактировании сообщения: {str(e)}")
