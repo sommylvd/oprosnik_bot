@@ -60,7 +60,7 @@ PAIN_POINTS_PAGES = [
         "description": "(уровень сложности интеграции ваших систем/оборудования с отечественным ПО)",
         "callback_data": "integration",
         "follow_up_state": SurveyStates.pain_points_integration_details,
-        "follow_up_message": "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nУкажите уровень:",
+        "follow_up_message": "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nПожалуйста, выберите один из вариантов по уровню сложности:",
         "follow_up_buttons": INTEGRATION_DETAILS_BUTTONS
     },
     {
@@ -68,7 +68,7 @@ PAIN_POINTS_PAGES = [
         "description": "(доступность специалистов с опытом работы в нужном отечественном ПО)",
         "callback_data": "personnel",
         "follow_up_state": SurveyStates.pain_points_personnel_details,
-        "follow_up_message": "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nУкажите уровень:",
+        "follow_up_message": "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nПожалуйста, выберите один из вариантов по уровню сложности:",
         "follow_up_buttons": PERSONNEL_DETAILS_BUTTONS
     },
     {
@@ -76,7 +76,7 @@ PAIN_POINTS_PAGES = [
         "description": "(острота проблемы совместимости отечественного ПО с вашим имеющимся ПО)",
         "callback_data": "compatibility",
         "follow_up_state": SurveyStates.pain_points_compatibility_details,
-        "follow_up_message": "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nУкажите уровень:",
+        "follow_up_message": "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nПожалуйста, выберите один из вариантов по уровню сложности:",
         "follow_up_buttons": COMPATIBILITY_DETAILS_BUTTONS
     },
     {
@@ -84,7 +84,7 @@ PAIN_POINTS_PAGES = [
         "description": "(направления затрат, которые вызывают наибольшее беспокойство)",
         "callback_data": "costs",
         "follow_up_state": SurveyStates.pain_points_costs_details,
-        "follow_up_message": "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nУкажите уровень:",
+        "follow_up_message": "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nПожалуйста, выберите один из вариантов по уровню сложности:",
         "follow_up_buttons": COSTS_DETAILS_BUTTONS
     },
     {
@@ -92,7 +92,7 @@ PAIN_POINTS_PAGES = [
         "description": "(важность уровня и скорости тех. поддержки)",
         "callback_data": "support",
         "follow_up_state": SurveyStates.pain_points_support_details,
-        "follow_up_message": "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nУкажите уровень:",
+        "follow_up_message": "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nПожалуйста, выберите один из вариантов по уровню сложности:",
         "follow_up_buttons": SUPPORT_DETAILS_BUTTONS
     }
 ]
@@ -788,7 +788,7 @@ async def pain_points_integration_other(callback: CallbackQuery, state: FSMConte
     user_id = callback.from_user.id
     user_responses[user_id]["current_pain_point"] = "integration"
     await callback.message.edit_text(
-        "<b>Укажите свой вариант по уровню сложности интеграции:</b>",
+        "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nПожалуйста, укажите свой вариант:",
         reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="pain_points_selection"),
         parse_mode='HTML'
     )
@@ -803,7 +803,7 @@ async def pain_points_personnel_other(callback: CallbackQuery, state: FSMContext
     user_id = callback.from_user.id
     user_responses[user_id]["current_pain_point"] = "personnel"
     await callback.message.edit_text(
-        "<b>Укажите свой вариант по доступности специалистов:</b>",
+        "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nПожалуйста, укажите свой вариант:",
         reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="pain_points_selection"),
         parse_mode='HTML'
     )
@@ -833,7 +833,7 @@ async def pain_points_costs_other(callback: CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user_responses[user_id]["current_pain_point"] = "costs"
     await callback.message.edit_text(
-        "<b>Укажите свой вариант по затратам:</b>",
+        "<b>Основные направления «болей» с которыми столкнулось ваше предприятие?</b>\n\nПожалуйста, укажите свой вариант:",
         reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="pain_points_selection"),
         parse_mode='HTML'
     )
@@ -1153,7 +1153,7 @@ async def direct_replacement(callback: CallbackQuery, state: FSMContext):
 
     if callback.data == "other_repl":
         await callback.message.edit_text(
-            "<b>Насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО?</b>",
+            "<b>Насколько важна для вас возможность прямого замещения зарубежного ПО на отечественное ПО?</b>\n\nПожалуйста, укажите свой вариант:",
             reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="direct_replacement"),
             parse_mode='HTML'
         )
@@ -1326,7 +1326,7 @@ async def software_classes(callback: CallbackQuery, state: FSMContext):
             return
     else:
         await callback.message.edit_text(
-            "<b>Какие классы ПО вы бы хотели протестировать?</b>",
+            "<b>Какие классы ПО вы бы хотели протестировать?</b>\n\nПожалуйста, укажите свой вариант:",
             reply_markup=create_inline_keyboard({}, 2, include_back=True, back_state="software_classes"),
             parse_mode='HTML'
         )
